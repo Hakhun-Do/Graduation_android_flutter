@@ -1,0 +1,31 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // AGP 버전을 8.5.0으로 설정
+        classpath("com.android.tools.build:gradle:8.5.0")
+
+        // Kotlin 플러그인 추가
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.21") // 최신 Kotlin 버전으로 업데이트
+    }
+}
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
