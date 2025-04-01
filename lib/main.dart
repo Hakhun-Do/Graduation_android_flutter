@@ -23,6 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+        debugShowCheckedModeBanner: false, //DEBUG 표시 없애는 코드
         initialRoute: '/',
         routes: {
           '/': (context) => LoginPage(),
