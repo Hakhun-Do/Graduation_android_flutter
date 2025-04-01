@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:graduation_project/login_page.dart';
 import 'package:graduation_project/mainpage.dart';
 import 'package:graduation_project/register_page.dart';
+import 'package:graduation_project/profile_change_password.dart';
+import 'package:graduation_project/profile_input_area.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:graduation_project/src/home.dart';
 
@@ -29,7 +31,8 @@ class MyApp extends StatelessWidget {
           '/': (context) => LoginPage(),
           '/r': (context) => RegisterPage(),
           '/m': (context) => MainPage(),
-          '/h': (context) => Home()
+          '/c': (context) => ChangePassword(),
+          '/i': (context) => InputArea(),
         }
     );
   }

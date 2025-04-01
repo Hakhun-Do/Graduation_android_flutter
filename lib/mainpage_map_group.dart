@@ -66,7 +66,7 @@ class _MapGroupState extends State<MapGroup> {
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(15.0),
       child: TextField(
         decoration: InputDecoration(
           border: OutlineInputBorder(),

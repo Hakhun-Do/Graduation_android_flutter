@@ -44,12 +44,16 @@ class ProfileGroup extends StatelessWidget {
           Column(
             children: [
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/c');
+                },
                 child: Text('비밀번호 변경'),
               ),
               SizedBox(height: 10),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/i');
+                },
                 child: Text('관할 구역 지정'),
               ),
               SizedBox(height: 20),

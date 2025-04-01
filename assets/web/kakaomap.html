@@ -8,10 +8,37 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"/>
     <script type="text/javascript"
             src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f234bac27d3808570a59571cdce04bf5"></script>
+    <style>
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+        }
+
+        #controls button {
+            margin: 4px 0;
+            width: 100px;
+        }
+
+        #maplevel {
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+    </style>
 </head>
 
 <body style="margin: 0;">
 <div id="map" style="width: 100vw; height: 100vh;"></div>
+
+<!-- ✅ 버튼 및 지도 레벨 표시 -->
+<div id="controls">
+    <div id="result"></div>
+</div>
 
 <script src="kakaomap.js"></script>
 </body>
