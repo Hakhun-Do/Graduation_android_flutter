@@ -17,10 +17,10 @@ class KakaoMapController {
     await webViewController.runJavaScript("fitBounds('${jsonEncode(points)}');");
   }
 
-  /* 카메라 이동 기능을 추가 - (삭제 해도 상관 없음)
-  Future<void> moveCamera(LatLng latLng, {int zoomLevel = 0}) async {
+  Future<void> moveCamera(LatLng latLng, {int zoomLevel = 3}) async {
     final webViewController = await _webViewControllerFuture;
-    await webViewController.runJavaScript('moveCamera(${latLng.latitude}, ${latLng.longitude}, $zoomLevel);');
+    await webViewController.runJavaScript(
+        'moveCamera(${latLng.latitude}, ${latLng.longitude}, $zoomLevel);'
+    );
   }
-   */
 }

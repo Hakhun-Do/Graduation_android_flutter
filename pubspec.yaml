@@ -31,6 +31,7 @@ dependencies:
     sdk: flutter
   http: ^0.13.5
   flutter_secure_storage: ^9.0.0 # 최신 버전 확인 후 적용
+  geolocator: ^10.1.0  # 또는 최신 버전
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

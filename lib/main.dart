@@ -5,7 +5,6 @@ import 'package:graduation_project/register_page.dart';
 import 'package:graduation_project/profile_change_password.dart';
 import 'package:graduation_project/profile_input_area.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:graduation_project/src/home.dart';
 
 InAppLocalhostServer server = InAppLocalhostServer(port: 8080);
 

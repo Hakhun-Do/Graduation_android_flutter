@@ -26,7 +26,6 @@ class KakaoMap extends StatefulWidget {
 
 class _KakaoMapState extends State<KakaoMap> {
   late final WebViewController _webViewController;
-  late final KakaoMapController _mapController;
 
   @override
   void initState() {
@@ -36,10 +35,15 @@ class _KakaoMapState extends State<KakaoMap> {
       ..setBackgroundColor(Colors.transparent)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (String url) {
-            _mapController = KakaoMapController(_webViewController as Future<WebViewController>);
+          onPageFinished: (String url) async {
+            // ✅ WebViewController를 Future.value()로 감싸 전달
+            final mapController = KakaoMapController(Future.value(_webViewController));
+
+            // ✅ JS 초기화 기다리기 (1초 후 실행)
+            await Future.delayed(Duration(seconds: 1));
+
             if (widget.onMapCreated != null) {
-              widget.onMapCreated!(_mapController);
+              widget.onMapCreated!(mapController);
             }
           },
         ),

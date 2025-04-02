@@ -1,9 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:graduation_project/src/kakao_map_controller.dart';
 import 'package:graduation_project/src/kakao_map.dart';
 import 'package:graduation_project/src/model/lat_lng.dart';
+import 'package:geolocator/geolocator.dart'; // 위치 권한 관련 import
 
 class MapGroup extends StatefulWidget {
   const MapGroup({super.key});
@@ -16,6 +16,47 @@ class _MapGroupState extends State<MapGroup> {
   KakaoMapController? _kakaoMapController;
   LatLng? _lastLatLng; // 마지막 위치 저장
   int _lastZoomLevel = 0; // 마지막 줌 레벨 저장
+  Future<void> _initLocationAndMoveCamera() async {
+    try {
+      Position position = await _determinePosition();
+      print("현재 위치: ${position.latitude}, ${position.longitude}");
+
+      // 지도 컨트롤러가 생성된 후에 위치 이동하도록 대기
+      if (_kakaoMapController != null) {
+        _kakaoMapController!.moveCamera(
+          LatLng(position.latitude, position.longitude),
+          zoomLevel: 3, // 필요시 줌 레벨 조정
+        );
+      }
+    } catch (e) {
+      print("위치 정보를 가져오는 중 오류 발생: $e");
+    }
+  }
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +72,7 @@ class _MapGroupState extends State<MapGroup> {
                 child: KakaoMap(
                   onMapCreated: (KakaoMapController controller) {
                     _kakaoMapController = controller;
+                    _initLocationAndMoveCamera(); // 컨트롤러 초기화 후 위치 이동 시도
                     /* 초기 위치로 카메라 이동 (첫 로딩 시 위치를 설정할 경우) - (삭제 해도 상관 없음)
                     if (_lastLatLng != null && _lastZoomLevel > 0) {
                       _kakaoMapController?.moveCamera(

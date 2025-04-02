@@ -3,6 +3,7 @@ let polylines = [];
 let circles = [];
 let polygons = [];
 let markers = [];
+let marker = null; // 클릭용 마커 전역 선언
 
 function clearPolyline() {
     for (let i = 0; i < polylines.length; i++) {
@@ -171,6 +172,11 @@ function displayLevel() {
     }
 }
 
+function moveCamera(lat, lng, zoomLevel) {
+    map.setLevel(zoomLevel);
+    map.setCenter(new kakao.maps.LatLng(lat, lng));
+}
+
 window.cameraIdle = {
     postMessage: function (message) {
         console.log("Flutter로 전송:", message);
@@ -184,6 +190,12 @@ window.onload = function () {
         level: 3
     };
     map = new kakao.maps.Map(container, options);
+
+    // 클릭용 마커 초기화
+    marker = new kakao.maps.Marker({
+        position: map.getCenter()
+    });
+    marker.setMap(map);
 
     const zoomControl = new kakao.maps.ZoomControl();
     map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
@@ -215,13 +227,37 @@ window.onload = function () {
 
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
         let latLng = mouseEvent.latLng;
-        map.panTo(latLng);
+        let currentCenter = map.getCenter();
+
+        let distance = Math.sqrt(
+            Math.pow(latLng.getLat() - currentCenter.getLat(), 2) +
+            Math.pow(latLng.getLng() - currentCenter.getLng(), 2)
+        );
+        if (distance > 0.0001) {
+            map.panTo(latLng);
+        }
+
+        marker.setPosition(latLng);
+
+        let message = '클릭한 위치의 위도는 ' + latLng.getLat() + ' 이고, ';
+        message += '경도는 ' + latLng.getLng() + ' 입니다';
+        let resultDiv = document.getElementById('clickLatlng');
+        console.log("resultDiv:", resultDiv);
+        if (resultDiv) {
+            resultDiv.innerHTML = message;
+            console.log("메시지 업데이트됨:", message);
+        } else {
+            console.warn("clickLatlng div를 찾을 수 없음");
+        }
+
         const clickLatLng = {
             latitude: latLng.getLat(),
             longitude: latLng.getLng(),
             zoomLevel: map.getLevel(),
         };
-        onMapTap.postMessage(JSON.stringify(clickLatLng));
+        if (typeof onMapTap !== 'undefined') {
+            onMapTap.postMessage(JSON.stringify(clickLatLng));
+        }
     });
 };
 
@@ -229,6 +265,14 @@ if (typeof zoomChanged === 'undefined') {
     window.zoomChanged = {
         postMessage: function (msg) {
             console.log("Flutter로 보낼 zoomChanged 메시지:", msg);
+        }
+    };
+}
+
+if (typeof onMapTap === 'undefined') {
+    window.onMapTap = {
+        postMessage: function (msg) {
+            console.log("Flutter로 보낼 onMapTap 메시지:", msg);
         }
     };
 }
