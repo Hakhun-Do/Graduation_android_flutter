@@ -198,7 +198,7 @@ class ApiService {
 
     print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
 
-    final url = Uri.parse("$baseUrl/updatePassword"); // 프로필 조회 API 엔드포인트
+    final url = Uri.parse("$baseUrl/updatePos"); // 프로필 조회 API 엔드포인트
 
     // ✅ 보낼 요청 정보 출력
     print("🔍 요청 URL: $url");
