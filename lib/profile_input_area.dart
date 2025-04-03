@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:graduation_project/api_service.dart'; // ApiService import 추가
 
 class InputArea extends StatelessWidget {
   final TextEditingController _areaController = TextEditingController();
+  final ApiService apiService = ApiService(); // ApiService 인스턴스 생성
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +40,37 @@ class InputArea extends StatelessWidget {
             ),
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 // 관할 구역 지정 로직 추가
-                print('지정된 관할 구역: ${_areaController.text}');
+                String newPos = _areaController.text.trim();
+
+                if (newPos.isEmpty) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('관할 구역을 입력하세요!')));
+                  }
+                  return; // 관할 구역 지정 진행 안 함
+                }
+
+                // API 호출
+                Map<String, dynamic>? result = await apiService.updatePos(
+                  newPos,
+                );
+
+                if (context.mounted) {
+                  if (result != null && result["success"] == true) {
+                    // 관할 구역 변경 성공 메시지 출력
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('관할 구역이 변경되었습니다!')));
+                    Navigator.pop(context); // 이전 화면으로 돌아가기
+                  } else {
+                    // 관할 구역 변경 실패 메시지 출력
+                    String errorMessage = result != null ? result["error"] ?? "관할 구역 변경에 실패했습니다." : "관할 구역 변경에 실패했습니다.";
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(errorMessage)),
+                    );
+                  }
+                }
               },
               child: Text('관할 구역 지정'),
               style: ElevatedButton.styleFrom(
