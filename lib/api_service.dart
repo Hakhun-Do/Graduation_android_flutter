@@ -146,7 +146,7 @@ class ApiService {
   }
 
   // 비밀번호 변경
-  Future<Map<String, dynamic>?> updatePassword(String postpassword, String newpassword) async {
+  Future<Map<String, dynamic>?> updatePassword(String currentPassword, String newPassword) async {
     String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
     if (token == null) {
       print("❌ JWT 토큰이 없습니다.");
@@ -170,8 +170,8 @@ class ApiService {
         "User-Agent": "PostmanRuntime/7.29.2", // ✅ Postman과 동일한 User-Agent 추가
       },
       body: jsonEncode({
-        "password": postpassword,
-        "newPassword": newpassword,
+        "password": currentPassword,
+        "newPassword": newPassword,
       }),
     );
 

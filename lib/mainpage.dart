@@ -14,6 +14,7 @@ class MainPage extends StatefulWidget {
 class MainPageState extends State<MainPage> {
   int _currentIndex = 0;
   Map<String, dynamic>? _userProfile; // 회원 정보 저장 변수
+  final ApiService apiService = ApiService();
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class MainPageState extends State<MainPage> {
           name: _userProfile?['userName'] ?? '이름 없음',
           phoneNumber: _userProfile?['userNum'] ?? '번호 없음',
           id: _userProfile?['userId'] ?? '아이디 없음',
+          apiService: apiService, // 의존성 주입
         ),
       ), // 프로필
       bottomNavigationBar: BottomNavigationBar(
