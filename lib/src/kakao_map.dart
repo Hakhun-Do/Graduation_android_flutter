@@ -11,6 +11,7 @@ class KakaoMap extends StatefulWidget {
   final OnMapTap? onMapTap;
   final OnCameraIdle? onCameraIdle;
   final OnZoomChanged? onZoomChanged;
+  final WebViewController? webViewController;
 
   KakaoMap({
     Key? key,
@@ -18,6 +19,7 @@ class KakaoMap extends StatefulWidget {
     this.onMapTap,
     this.onCameraIdle,
     this.onZoomChanged,
+    this.webViewController,
   }) : super(key: key);
 
   @override
@@ -30,29 +32,39 @@ class _KakaoMapState extends State<KakaoMap> {
   @override
   void initState() {
     super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) async {
-            // ✅ WebViewController를 Future.value()로 감싸 전달
-            final mapController = KakaoMapController(Future.value(_webViewController));
 
-            // ✅ JS 초기화 기다리기 (1초 후 실행)
-            await Future.delayed(Duration(seconds: 1));
+    _webViewController = widget.webViewController ??
+        WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..addJavaScriptChannel(
+            'flutterWebViewReady',
+            onMessageReceived: (JavaScriptMessage message) {
+              print('✅ JS 로딩 완료 수신: ${message.message}');
+            },
+          )
+          ..setBackgroundColor(Colors.transparent)
+          ..setNavigationDelegate(
+            NavigationDelegate(
+              onPageFinished: (String url) async {
+                final mapController =
+                KakaoMapController(Future.value(_webViewController));
+                await Future.delayed(Duration(seconds: 1));
+                if (widget.onMapCreated != null) {
+                  widget.onMapCreated!(mapController);
+                }
+              },
+            ),
+          )
+          ..loadRequest(
+            Uri.parse('http://localhost:8080/assets/web/kakaomap.html'),
+          );
 
-            if (widget.onMapCreated != null) {
-              widget.onMapCreated!(mapController);
-            }
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse('http://localhost:8080/assets/web/kakaomap.html'));
   }
 
   @override
   Widget build(BuildContext context) {
-    return WebViewWidget(controller: _webViewController);
+    return WebViewWidget(
+      controller: _webViewController,
+    );
   }
 }

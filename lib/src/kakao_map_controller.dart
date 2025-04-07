@@ -23,4 +23,8 @@ class KakaoMapController {
         'moveCamera(${latLng.latitude}, ${latLng.longitude}, $zoomLevel);'
     );
   }
+  Future<void> evalJavascript(String jsCode) async {
+    final webViewController = await _webViewControllerFuture;
+    await webViewController.runJavaScript(jsCode);
+  }
 }
