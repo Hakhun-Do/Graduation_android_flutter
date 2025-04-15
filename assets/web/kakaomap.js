@@ -188,7 +188,25 @@ window.cameraIdle = {
   }
 };
 
-// ======= Map Init =======
+window.onMapTap = {
+  postMessage: function (message) {
+    console.log("지도 클릭 위치:", message);
+  }
+};
+
+// ======= Map Init & Flutter Ready 신호 =======
+function waitForFlutterReadyAndSend() {
+  const interval = setInterval(() => {
+    if (window.flutterWebViewReady) {
+      console.log("✅ flutterWebViewReady 채널 발견 → Flutter에 'ready' 전송");
+      window.flutterWebViewReady.postMessage("ready");
+      clearInterval(interval);
+    } else {
+      console.log("⏳ flutterWebViewReady 채널 대기 중...");
+    }
+  }, 200); // 0.2초 간격으로 체크
+}
+
 window.onload = function () {
   kakao.maps.load(function () {
     const container = document.getElementById('map');
@@ -242,15 +260,8 @@ window.onload = function () {
       }
     });
 
-    if (window.flutter_inappwebview) {
-          console.log("🟢 JS 초기화 완료, Flutter에 신호 보냄");
-          window.flutter_inappwebview.callHandler('flutterWebViewReady', 'ready');
-        } else if (window.flutterWebViewReady) {
-          console.log("🟢 JS 초기화 완료, flutterWebViewReady 채널로 신호 보냄");
-          window.flutterWebViewReady.postMessage("ready");
-        } else {
-          console.warn("❗️ Flutter 브리지가 존재하지 않음");
-        }
+    // ✅ Flutter 준비 상태 기다리고 ready 신호 보내기
+    waitForFlutterReadyAndSend();
   });
 };
 
