@@ -154,6 +154,12 @@ function searchPlaces(keyword) {
         bounds.extend(new kakao.maps.LatLng(place.y, place.x));
       });
       map.setBounds(bounds);
+
+      // ✅ 추가: 첫 번째 결과로 이동
+      if (data.length > 0) {
+        const firstPlace = data[0];
+        map.panTo(new kakao.maps.LatLng(firstPlace.y, firstPlace.x));
+      }
     } else {
       console.warn("검색 실패 또는 결과 없음:", status);
     }
@@ -174,7 +180,29 @@ function displaySearchMarker(place) {
   markers.push(newMarker);
 }
 
-// ======= Flutter Bridge =======
+// ======= 현재 위치로 이동 함수 추가 =======
+function moveToCurrentLocation(lat, lng) {
+  if (map) {
+    map.panTo(new kakao.maps.LatLng(lat, lng));
+    if (marker) {
+      marker.setPosition(new kakao.maps.LatLng(lat, lng));
+    }
+  }
+}
+
+// ======= Flutter Bridge에 함수 노출 =======
+window.moveToCurrentLocationBridge = {
+  postMessage: function (message) {
+    // message는 { latitude: xx, longitude: yy } 형태의 JSON 문자열
+    try {
+      const data = JSON.parse(message);
+      moveToCurrentLocation(data.latitude, data.longitude);
+    } catch (e) {
+      console.warn("moveToCurrentLocationBridge 파싱 오류:", e);
+    }
+  }
+};
+
 window.searchKeywordFlutterBridge = {
   postMessage: function (keyword) {
     console.log("Flutter에서 받은 검색어:", keyword);
@@ -214,7 +242,6 @@ window.onload = function () {
       center: new kakao.maps.LatLng(37.3626138, 126.9264801),
       level: 3
     };
-
     map = new kakao.maps.Map(container, options);
     ps = new kakao.maps.services.Places();
     infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });
@@ -275,3 +302,15 @@ function empty(value) {
     (typeof value === 'object' && Object.keys(value).length === 0)
   );
 }
+
+// ======= 전역 함수 노출 =======
+window.panTo = panTo;
+window.moveCamera = moveCamera;
+window.setCenter = setCenter;
+window.fitBounds = fitBounds;
+window.addMarker = addMarker;
+window.clear = clear;
+window.addPolyline = addPolyline;
+window.addCircle = addCircle;
+window.addPolygon = addPolygon;
+window.searchPlaces = searchPlaces;

@@ -223,7 +223,6 @@ class _MapGroupState extends State<MapGroup> {
   @override
   void initState() {
     super.initState();
-
     _webViewController = WebViewController()
       ..addJavaScriptChannel(
         'flutterWebViewReady',
@@ -247,6 +246,20 @@ class _MapGroupState extends State<MapGroup> {
         onMessageReceived: (JavaScriptMessage message) {
           print('📍 JS → Flutter: onMapTap → ${message.message}');
         },
+      )
+      ..addJavaScriptChannel(
+        'searchResultBridge',
+        onMessageReceived: (JavaScriptMessage message) {
+          final data = jsonDecode(message.message);
+          if (data['success'] == true) {
+            print('🔍 검색 성공: ${data['count']}개 결과');
+          } else {
+            print('❌ 검색 실패');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('검색 결과가 없습니다.')),
+            );
+          }
+        },
       );
   }
 
@@ -264,12 +277,28 @@ class _MapGroupState extends State<MapGroup> {
     }
   }
 
+  Future<void> _moveToMyLocation() async {
+    try {
+      Position position = await _determinePosition();
+      if (_kakaoMapController != null) {
+        _kakaoMapController!.moveCamera(
+          LatLng(position.latitude, position.longitude),
+          zoomLevel: 3,
+        );
+      }
+      await _webViewController.runJavaScript(
+        'panTo(${position.latitude}, ${position.longitude});',
+      );
+    } catch (e) {
+      print("❌ 내 위치로 이동 중 오류 발생: $e");
+    }
+  }
+
   Future<Position> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return Future.error('Location services are disabled.');
     }
-
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -277,39 +306,103 @@ class _MapGroupState extends State<MapGroup> {
         return Future.error('Location permissions are denied');
       }
     }
-
     if (permission == LocationPermission.deniedForever) {
       return Future.error('Location permissions are permanently denied.');
     }
-
     return await Geolocator.getCurrentPosition();
+  }
+
+  Widget _buildDropdowns() {
+    final cityList = regionMap.keys.toList();
+    final townList = _selectedCity != null ? regionMap[_selectedCity!]!.keys.toList() : [];
+    final districtList = (_selectedCity != null && _selectedTown != null)
+        ? regionMap[_selectedCity!]![_selectedTown!] ?? []
+        : [];
+
+    return Padding(
+      padding: const EdgeInsets.all(15.0),
+      child: Column(
+        children: [
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: '시/도 선택',
+              border: OutlineInputBorder(),
+              helperText: _mapReady ? null : '지도가 로딩될 때까지 기다려 주세요',
+            ),
+            value: _selectedCity,
+            items: cityList.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
+            onChanged: _mapReady
+                ? (value) {
+              setState(() {
+                _selectedCity = value;
+                _selectedTown = null;
+                _selectedDistrict = null;
+              });
+            }
+                : null,
+          ),
+          const SizedBox(height: 10),
+          if (_selectedCity != null)
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: '시/군 선택', border: OutlineInputBorder()),
+              value: _selectedTown,
+              items: townList.map<DropdownMenuItem<String>>((town) => DropdownMenuItem<String>(
+                value: town,
+                child: Text(town),
+              )).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedTown = value;
+                  _selectedDistrict = null;
+                });
+              },
+            ),
+          const SizedBox(height: 10),
+          if (_selectedTown != null)
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: '구/읍/면 선택', border: OutlineInputBorder()),
+              value: _selectedDistrict,
+              items: districtList.map<DropdownMenuItem<String>>((district) => DropdownMenuItem<String>(
+                value: district,
+                child: Text(district),
+              )).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedDistrict = value;
+                  if (_mapReady && _kakaoMapController != null && _selectedDistrict != null) {
+                    final keyword = "$_selectedCity $_selectedTown $_selectedDistrict";
+                    print("🔍 검색 실행: $keyword");
+                    _kakaoMapController!.evalJavascript(
+                      'searchKeywordFlutterBridge.postMessage("$keyword");',
+                    );
+                  }
+                });
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 지도 전체 화면
         Positioned.fill(
           child: KakaoMap(
             onMapCreated: (controller) {
               _kakaoMapController = controller;
               _initLocationAndMoveCamera();
             },
-            onMapTap: (latLng) {
-              print("📍 맵 탭: ${jsonEncode(latLng)}");
-            },
-            onCameraIdle: (latLng, zoomLevel) {
-              print("📸 카메라 이동 완료: ${jsonEncode(latLng)}, 줌 레벨: $zoomLevel");
-            },
-            onZoomChanged: (zoomLevel) {
-              print("🔍 줌 변경: $zoomLevel");
-            },
+            onMapTap: (latLng) => print("📍 맵 탭: ${jsonEncode(latLng)}"),
+            onCameraIdle: (latLng, zoomLevel) => print("📸 카메라 이동 완료: ${jsonEncode(latLng)}, 줌 레벨: $zoomLevel"),
+            onZoomChanged: (zoomLevel) => print("🔍 줌 변경: $zoomLevel"),
             webViewController: _webViewController,
           ),
         ),
-
-        // 상단 드롭다운 패널
         Positioned(
           left: 0,
           right: 0,
@@ -326,129 +419,27 @@ class _MapGroupState extends State<MapGroup> {
               child: Column(
                 children: [
                   IconButton(
-                    icon: Icon(_isPanelExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down),
-                    onPressed: () {
-                      setState(() {
-                        _isPanelExpanded = !_isPanelExpanded;
-                      });
-                    },
+                    icon: Icon(_isPanelExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                    onPressed: () => setState(() => _isPanelExpanded = !_isPanelExpanded),
                   ),
                   if (_isPanelExpanded)
-                    Expanded(
-                      child: SingleChildScrollView(child: _buildDropdowns()),
-                    ),
+                    Expanded(child: SingleChildScrollView(child: _buildDropdowns())),
                 ],
               ),
             ),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildDropdowns() {
-    final cityList = regionMap.keys.toList();
-    final townList = _selectedCity != null ? regionMap[_selectedCity!]!.keys.toList() : [];
-    final districtList = (_selectedCity != null && _selectedTown != null)
-        ? regionMap[_selectedCity!]![_selectedTown!] ?? []
-        : [];
-
-    return Padding(
-      padding: const EdgeInsets.all(15.0),
-      child: Column(
-        children: [
-          // 시/도 선택
-          Container(
-            width: double.infinity,
-            child: DropdownButtonFormField<String>(
-              isExpanded: true,
-              decoration: InputDecoration(
-                labelText: '시/도 선택',
-                border: OutlineInputBorder(),
-                helperText: _mapReady ? null : '지도가 로딩될 때까지 기다려 주세요',
-              ),
-              value: _selectedCity,
-              items: cityList
-                  .map<DropdownMenuItem<String>>((city) => DropdownMenuItem<String>(
-                value: city,
-                child: Text(city),
-              ))
-                  .toList(),
-              onChanged: _mapReady
-                  ? (value) {
-                setState(() {
-                  _selectedCity = value;
-                  _selectedTown = null;
-                  _selectedDistrict = null;
-                });
-              }
-                  : null,
-            ),
+        Positioned(
+          bottom: 30,
+          right: 20,
+          child: FloatingActionButton(
+            heroTag: 'moveToMyLocation',
+            onPressed: _moveToMyLocation,
+            child: Icon(Icons.my_location),
+            tooltip: '내 위치로 이동',
           ),
-          const SizedBox(height: 10),
-
-          // 시/군 선택
-          if (_selectedCity != null)
-            Container(
-              width: double.infinity,
-              child: DropdownButtonFormField<String>(
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: '시/군 선택', border: OutlineInputBorder()),
-                value: _selectedTown,
-                items: townList
-                    .map<DropdownMenuItem<String>>((town) => DropdownMenuItem<String>(
-                  value: town,
-                  child: Text(town),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTown = value;
-                    _selectedDistrict = null;
-                  });
-                },
-              ),
-            ),
-          const SizedBox(height: 10),
-
-          // 구/읍/면 선택
-          if (_selectedTown != null)
-            Container(
-              width: double.infinity,
-              child: DropdownButtonFormField<String>(
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: '구/읍/면 선택', border: OutlineInputBorder()),
-                value: _selectedDistrict,
-                items: districtList
-                    .map<DropdownMenuItem<String>>((district) => DropdownMenuItem<String>(
-                  value: district,
-                  child: Text(district),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedDistrict = value;
-                    if (!_mapReady) {
-                      print("⏳ 지도가 아직 준비되지 않았습니다");
-                    } else if (_kakaoMapController == null) {
-                      print("⏳ 지도 컨트롤러가 아직 준비되지 않았습니다");
-                    } else if (_selectedDistrict == null) {
-                      print("⛔️ 행정동(구/읍/면)이 아직 선택되지 않았습니다");
-                    } else {
-                      final keyword = "$_selectedCity $_selectedTown $_selectedDistrict";
-                      print("🔍 검색 실행: $keyword");
-                      _kakaoMapController!.evalJavascript(
-                        'searchKeywordFlutterBridge.postMessage("$keyword");',
-                      );
-                    }
-                  });
-                },
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

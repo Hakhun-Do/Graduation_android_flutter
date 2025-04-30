@@ -84,6 +84,24 @@
             });
         }
     };
+
+     // ✅ Flutter → JS 통신용 브리지 정의
+    window.searchKeywordFlutterBridge = {
+        postMessage: function (keyword) {
+            // 기존 검색 함수
+        }
+    };
+
+    // ✅ Flutter → JS로 위치 이동 함수 추가
+    window.panTo = function(lat, lng) {
+        const moveLatLon = new kakao.maps.LatLng(lat, lng);
+        map.panTo(moveLatLon);
+    };
+
+    window.moveCamera = function(lat, lng) {
+        const moveLatLon = new kakao.maps.LatLng(lat, lng);
+        map.setCenter(moveLatLon);
+    };
 </script>
 </body>
 
