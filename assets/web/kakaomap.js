@@ -193,7 +193,6 @@ function moveToCurrentLocation(lat, lng) {
 // ======= Flutter Bridge에 함수 노출 =======
 window.moveToCurrentLocationBridge = {
   postMessage: function (message) {
-    // message는 { latitude: xx, longitude: yy } 형태의 JSON 문자열
     try {
       const data = JSON.parse(message);
       moveToCurrentLocation(data.latitude, data.longitude);
@@ -222,19 +221,7 @@ window.onMapTap = {
   }
 };
 
-// ======= Map Init & Flutter Ready 신호 =======
-function waitForFlutterReadyAndSend() {
-  const interval = setInterval(() => {
-    if (window.flutterWebViewReady) {
-      console.log("✅ flutterWebViewReady 채널 발견 → Flutter에 'ready' 전송");
-      window.flutterWebViewReady.postMessage("ready");
-      clearInterval(interval);
-    } else {
-      console.log("⏳ flutterWebViewReady 채널 대기 중...");
-    }
-  }, 200); // 0.2초 간격으로 체크
-}
-
+// ======= Map Init =======
 window.onload = function () {
   kakao.maps.load(function () {
     const container = document.getElementById('map');
@@ -286,9 +273,6 @@ window.onload = function () {
         onMapTap.postMessage(JSON.stringify(clickLatLng));
       }
     });
-
-    // ✅ Flutter 준비 상태 기다리고 ready 신호 보내기
-    waitForFlutterReadyAndSend();
   });
 };
 
