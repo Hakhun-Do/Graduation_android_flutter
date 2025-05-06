@@ -64,9 +64,8 @@
         }
     };
 
-    // ✅ Flutter → JS 통신용 브리지 정의
     window.searchKeywordFlutterBridge = {
-        postMessage: function (keyword) {
+         postMessage: function (keyword) {
             console.log("🔍 Flutter에서 전달된 키워드:", keyword);
 
             const ps = new kakao.maps.services.Places();
@@ -78,6 +77,11 @@
                         bounds.extend(latlng);
                     }
                     map.setBounds(bounds);
+
+                    // 검색 결과 중 첫 번째 위치로 지도 이동 (필요시)
+                    if (data.length > 0) {
+                        map.panTo(new kakao.maps.LatLng(data[0].y, data[0].x));
+                    }
                 } else {
                     console.warn("검색 실패: " + status);
                 }
@@ -85,12 +89,6 @@
         }
     };
 
-     // ✅ Flutter → JS 통신용 브리지 정의
-    window.searchKeywordFlutterBridge = {
-        postMessage: function (keyword) {
-            // 기존 검색 함수
-        }
-    };
 
     // ✅ Flutter → JS로 위치 이동 함수 추가
     window.panTo = function(lat, lng) {
