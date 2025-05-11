@@ -1,4 +1,3 @@
-//두번째 버전(마커 초기화, 일반 위치 누르면 작동못함), 마커 다 안찍힘
 let map = null;
 let ps = null;  // 검색 객체
 let infoWindow = null;
@@ -106,7 +105,7 @@ function addMarker(markerId, latLng, imageSrc, width = 24, height = 30, offsetX 
     image: markerImage
   });
 
-  newMarker.setMap(map);
+  //newMarker.setMap(map);
   markers.push(newMarker);
 
   if (!empty(infoWindowText)) {
@@ -268,7 +267,7 @@ window.onload = function () {
     clusterer = new kakao.maps.MarkerClusterer({
       map: map, // ✅ 클러스터러가 지도를 관리하게 함
       averageCenter: true,
-      minLevel: 5 // 지도의 최소 줌 레벨이 작을수록 클러스터링 범위가 넓어짐
+      minLevel: 10 // 지도의 최소 줌 레벨이 작을수록 클러스터링 범위가 넓어짐
     });
 
 

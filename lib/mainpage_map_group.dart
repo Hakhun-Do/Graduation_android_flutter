@@ -392,6 +392,7 @@ class _MapGroupState extends State<MapGroup> {
                   final hydrantData = await FireHydrantService().fetchHydrantData(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
+                    districtNm: _selectedDistrict,
                   );
                   print("✅ 첫 번째 hydrant 샘플: ${hydrantData.first}");
 

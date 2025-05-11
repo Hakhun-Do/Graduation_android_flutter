@@ -7,7 +7,8 @@ class FireHydrantService {
   Future<List<Map<String, dynamic>>> fetchHydrantData({
     required String ctprvnNm, // 시도명
     String? signguNm, // 시군구명
-    int numOfRows = 1000, // 한 페이지에서 가져올 데이터 수
+    String? districtNm, //구읍면명
+    int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
   }) async {
     final baseUrl = 'http://api.data.go.kr/openapi/tn_pubr_public_ffus_wtrcns_api';
     int page = 1;
@@ -59,6 +60,12 @@ class FireHydrantService {
     }
 
     print('✅ 총 소화전 ${allHydrants.length}개 받아옴');
-    return allHydrants;
+    final filteredHydrants = allHydrants.where((hydrant) {
+      final address = hydrant['lnmadr'] ?? '';
+      return districtNm == null || address.contains(districtNm); // 원하는 동명으로 교체 가능
+    }).toList();
+
+    print('🔍 ${districtNm ?? '전체'} 소화전 개수: ${filteredHydrants.length}');
+    return filteredHydrants;
   }
 }
