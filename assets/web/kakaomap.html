@@ -6,101 +6,37 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"/>
+
+    <!-- Kakao Map SDK -->
     <script type="text/javascript"
             src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f234bac27d3808570a59571cdce04bf5&libraries=services"></script>
 
-    <style>
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 10;
-        }
+    <!-- ✅ 사용자 정의 JS 파일 불러오기 -->
+    <script src="kakaomap.js"></script>
 
-        #maplevel {
-            margin-top: 8px;
-            font-weight: bold;
-            font-size: 14px;
-        }
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; }
+       #map { width: 100vw; height: 100vh; }
+       #clickLatlng {
+           position: absolute;
+           bottom: 20px;
+           left: 10px;
+           background: white;
+           padding: 10px;
+           z-index: 100;
+       }
     </style>
 </head>
 
-<body style="margin: 0;">
-<div id="map" style="width: 100vw; height: 100vh;"></div>
-
-<div id="controls">
-    <div id="result"></div>
-</div>
-<div id="clickLatlng" style="position: absolute; bottom: 20px; left: 10px; background: white; padding: 10px; z-index: 100;">
-    클릭한 위치 정보가 여기에 표시됩니다.
-</div>
+<body>
+<div id="map"></div>
+<div id="clickLatlng">클릭한 위치 정보가 여기에 표시됩니다.</div>
 
 <script>
-    let map;
-
-    window.onload = function () {
-        const container = document.getElementById('map');
-        const options = {
-            center: new kakao.maps.LatLng(33.450701, 126.570667),
-            level: 3
-        };
-
-        map = new kakao.maps.Map(container, options);
-
-        kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-            const latlng = mouseEvent.latLng;
-            const message = '클릭한 위치의 위도는 ' + latlng.getLat() + ', 경도는 ' + latlng.getLng() + ' 입니다';
-            document.getElementById('clickLatlng').innerHTML = message;
-        });
-
-        // ✅ Flutter에게 지도 준비 완료 메시지 전송
-        if (window.flutterWebViewReady) {
-            window.flutterWebViewReady.postMessage("map_ready");
-        } else {
-            console.warn("❗flutterWebViewReady 채널이 없음");
-        }
-    };
-
-    window.searchKeywordFlutterBridge = {
-         postMessage: function (keyword) {
-            console.log("🔍 Flutter에서 전달된 키워드:", keyword);
-
-            const ps = new kakao.maps.services.Places();
-            ps.keywordSearch(keyword, function (data, status) {
-                if (status === kakao.maps.services.Status.OK) {
-                    const bounds = new kakao.maps.LatLngBounds();
-                    for (let i = 0; i < data.length; i++) {
-                        const latlng = new kakao.maps.LatLng(data[i].y, data[i].x);
-                        bounds.extend(latlng);
-                    }
-                    map.setBounds(bounds);
-
-                    // 검색 결과 중 첫 번째 위치로 지도 이동 (필요시)
-                    if (data.length > 0) {
-                        map.panTo(new kakao.maps.LatLng(data[0].y, data[0].x));
-                    }
-                } else {
-                    console.warn("검색 실패: " + status);
-                }
-            });
-        }
-    };
-
-
-    // ✅ Flutter → JS로 위치 이동 함수 추가
-    window.panTo = function(lat, lng) {
-        const moveLatLon = new kakao.maps.LatLng(lat, lng);
-        map.panTo(moveLatLon);
-    };
-
-    window.moveCamera = function(lat, lng) {
-        const moveLatLon = new kakao.maps.LatLng(lat, lng);
-        map.setCenter(moveLatLon);
-    };
+    // ✅ Flutter에 준비 완료 신호 전송
+    if (window.flutterWebViewReady) {
+        window.flutterWebViewReady.postMessage("map_ready");
+    }
 </script>
 </body>
-
 </html>

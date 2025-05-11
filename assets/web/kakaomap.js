@@ -1,5 +1,6 @@
+//두번째 버전(마커 초기화, 일반 위치 누르면 작동못함), 마커 다 안찍힘
 let map = null;
-let ps = null;
+let ps = null;  // 검색 객체
 let infoWindow = null;
 let marker = null;
 
@@ -8,24 +9,31 @@ let polylines = [];
 let circles = [];
 let polygons = [];
 
+// 클러스터러를 초기화, 지도가 로딩된 후에 클러스터러를 적용
+let clusterer = null;
+
 // ======= Overlay Clear Functions =======
 function clearMarker() {
   markers.forEach(m => m.setMap(null));
   if (infoWindow) infoWindow.close();
   markers = [];
 }
+
 function clearPolyline() {
   polylines.forEach(p => p.setMap(null));
   polylines = [];
 }
+
 function clearCircle() {
   circles.forEach(c => c.setMap(null));
   circles = [];
 }
+
 function clearPolygon() {
   polygons.forEach(p => p.setMap(null));
   polygons = [];
 }
+
 function clear() {
   clearMarker();
   clearPolyline();
@@ -102,6 +110,11 @@ function addMarker(markerId, latLng, imageSrc, width = 24, height = 30, offsetX 
       showInfoWindow(newMarker, latLng.latitude, latLng.longitude, infoWindowText);
     });
   }
+
+  // 클러스터러에 마커 추가
+  if (clusterer) {
+    clusterer.addMarkers([newMarker]);
+  }
 }
 
 function showInfoWindow(marker, latitude, longitude, contents = '') {
@@ -133,12 +146,6 @@ function fitBounds(points) {
   list.forEach(p => bounds.extend(new kakao.maps.LatLng(p.latitude, p.longitude)));
   map.setBounds(bounds);
 }
-function displayLevel() {
-  const levelEl = document.getElementById('result');
-  if (levelEl && map) {
-    levelEl.innerHTML = '현재 지도 레벨은 ' + map.getLevel() + ' 레벨입니다.';
-  }
-}
 
 // ======= 장소 검색 =======
 function searchPlaces(keyword) {
@@ -153,9 +160,14 @@ function searchPlaces(keyword) {
         displaySearchMarker(place);
         bounds.extend(new kakao.maps.LatLng(place.y, place.x));
       });
+
+      // 지도 범위를 확장하여 모든 마커가 보이도록 함
       map.setBounds(bounds);
 
-      // ✅ 추가: 첫 번째 결과로 이동
+      // 줌 레벨을 적절히 조정 (지도가 너무 확대되지 않도록)
+      map.setLevel(5);
+
+      // ✅ 첫 번째 검색 결과로 이동
       if (data.length > 0) {
         const firstPlace = data[0];
         map.panTo(new kakao.maps.LatLng(firstPlace.y, firstPlace.x));
@@ -209,25 +221,13 @@ window.searchKeywordFlutterBridge = {
   }
 };
 
-window.cameraIdle = {
-  postMessage: function (message) {
-    console.log("Flutter로 전송:", message);
-  }
-};
-
-window.onMapTap = {
-  postMessage: function (message) {
-    console.log("지도 클릭 위치:", message);
-  }
-};
-
 // ======= Map Init =======
 window.onload = function () {
   kakao.maps.load(function () {
     const container = document.getElementById('map');
     const options = {
       center: new kakao.maps.LatLng(37.3626138, 126.9264801),
-      level: 3
+      level: 5  // 지도의 기본 줌 레벨을 적당히 설정
     };
     map = new kakao.maps.Map(container, options);
     ps = new kakao.maps.services.Places();
@@ -255,24 +255,6 @@ window.onload = function () {
         cameraIdle.postMessage(JSON.stringify(idleLatLng));
       }
     });
-
-    kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      const latLng = mouseEvent.latLng;
-      marker.setPosition(latLng);
-
-      const message = `클릭한 위치의 위도는 ${latLng.getLat()} 이고, 경도는 ${latLng.getLng()} 입니다`;
-      const resultDiv = document.getElementById('clickLatlng');
-      if (resultDiv) resultDiv.innerHTML = message;
-
-      const clickLatLng = {
-        latitude: latLng.getLat(),
-        longitude: latLng.getLng(),
-        zoomLevel: map.getLevel()
-      };
-      if (typeof onMapTap !== 'undefined') {
-        onMapTap.postMessage(JSON.stringify(clickLatLng));
-      }
-    });
   });
 };
 
@@ -286,15 +268,3 @@ function empty(value) {
     (typeof value === 'object' && Object.keys(value).length === 0)
   );
 }
-
-// ======= 전역 함수 노출 =======
-window.panTo = panTo;
-window.moveCamera = moveCamera;
-window.setCenter = setCenter;
-window.fitBounds = fitBounds;
-window.addMarker = addMarker;
-window.clear = clear;
-window.addPolyline = addPolyline;
-window.addCircle = addCircle;
-window.addPolygon = addPolygon;
-window.searchPlaces = searchPlaces;

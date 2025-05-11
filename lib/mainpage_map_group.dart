@@ -5,6 +5,8 @@ import 'package:graduation_project/src/kakao_map.dart';
 import 'package:graduation_project/src/model/lat_lng.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:graduation_project/api_data.dart';
+
 
 class MapGroup extends StatefulWidget {
   const MapGroup({super.key});
@@ -369,18 +371,52 @@ class _MapGroupState extends State<MapGroup> {
                 value: district,
                 child: Text(district),
               )).toList(),
-              onChanged: (value) {
+              onChanged: (value) async {
                 setState(() {
                   _selectedDistrict = value;
-                  if (_mapReady && _kakaoMapController != null && _selectedDistrict != null) {
-                    final keyword = "$_selectedCity $_selectedTown $_selectedDistrict";
-                    print("🔍 검색 실행: $keyword");
-                    _kakaoMapController!.evalJavascript(
-                      'searchKeywordFlutterBridge.postMessage("$keyword");',
-                    );
-                  }
                 });
+
+                if (_mapReady && _kakaoMapController != null && _selectedCity != null && _selectedTown != null) {
+                  final keyword = "$_selectedCity $_selectedTown $_selectedDistrict";
+                  print("🔍 검색 실행: $keyword");
+
+                  // 1. Flutter → JS 검색 (기존)
+                  _kakaoMapController!.evalJavascript(
+                    'searchKeywordFlutterBridge.postMessage("$keyword");',
+                  );
+
+                  // 2. ✅ 공공데이터 API에서 소화전 정보 가져오기
+                  final hydrantData = await FireHydrantService().fetchHydrantData(
+                    ctprvnNm: _selectedCity!,
+                    signguNm: _selectedTown,
+                  );
+
+                  // 3. ✅ 기존 마커 제거 (JS 함수 호출)
+                  //_kakaoMapController!.evalJavascript('clear();');
+
+
+                  // 4. ✅ 지도에 마커 추가
+                  for (var hydrant in hydrantData) {
+                    final lat = hydrant['LATITUDE'];
+                    final lng = hydrant['LONGITUDE'];
+                    final address = hydrant['RDNMADR'] ?? '위치 정보 없음';
+
+                    if (lat != null && lng != null) {
+                      final js = '''
+                        addMarker(
+                          null,
+                          JSON.stringify({latitude: $lat, longitude: $lng}),
+                          null,
+                          24, 30, 0, 0,
+                          "$address"
+                        );
+                      ''';
+                      _kakaoMapController!.evalJavascript(js);
+                    }
+                  }
+                }
               },
+
             ),
         ],
       ),
