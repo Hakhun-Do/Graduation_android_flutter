@@ -1,25 +1,22 @@
+// ✅ kakao.maps.load를 사용하려면 autoload=false 옵션 필요
+// HTML에서 sdk.js를 다음과 같이 수정해야 함:
+// <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=...&autoload=false&libraries=services,clusterer" defer></script>
+
 let map = null;
-let ps = null;  // 검색 객체
+let ps = null;
 let infoWindow = null;
 let marker = null;
-
 let markers = [];
 let polylines = [];
 let circles = [];
 let polygons = [];
-
-// 클러스터러를 초기화, 지도가 로딩된 후에 클러스터러를 적용
 let clusterer = null;
 
-// ======= Overlay Clear Functions =======
 function clearMarker() {
   markers.forEach(m => m.setMap(null));
   if (infoWindow) infoWindow.close();
   markers = [];
-  // ✅ 클러스터러 초기화 추가!
-    if (clusterer) {
-      clusterer.clear();
-    }
+  if (clusterer) clusterer.clear();
 }
 
 function clearPolyline() {
@@ -44,68 +41,14 @@ function clear() {
   clearPolygon();
 }
 
-// ======= Polyline / Circle / Polygon =======
-function addPolyline(callId, points, color, opacity = 1.0, width = 4) {
-  const list = JSON.parse(points);
-  const paths = list.map(p => new kakao.maps.LatLng(p.latitude, p.longitude));
-  const polyline = new kakao.maps.Polyline({
-    path: paths,
-    strokeWeight: width,
-    strokeColor: color,
-    strokeOpacity: opacity,
-    strokeStyle: 'solid'
-  });
-  polyline.setMap(map);
-  polylines.push(polyline);
-}
-
-function addCircle(callId, center, radius, strokeWeight, strokeColor, strokeOpacity = 1, strokeStyle = 'solid', fillColor = '#FFFFFF', fillOpacity = 0) {
-  center = JSON.parse(center);
-  const circle = new kakao.maps.Circle({
-    center: new kakao.maps.LatLng(center.latitude, center.longitude),
-    radius,
-    strokeWeight,
-    strokeColor,
-    strokeOpacity,
-    strokeStyle,
-    fillColor,
-    fillOpacity
-  });
-  circle.setMap(map);
-  circles.push(circle);
-}
-
-function addPolygon(callId, points, holes, strokeWeight, strokeColor, strokeOpacity = 1, strokeStyle = 'solid', fillColor = '#FFFFFF', fillOpacity = 0) {
-  const outer = JSON.parse(points).map(p => new kakao.maps.LatLng(p.latitude, p.longitude));
-  const holePaths = JSON.parse(holes).map(h => h.map(p => new kakao.maps.LatLng(p.latitude, p.longitude)));
-  const polygon = new kakao.maps.Polygon({
-    path: [outer, ...holePaths],
-    strokeWeight,
-    strokeColor,
-    strokeOpacity,
-    strokeStyle,
-    fillColor,
-    fillOpacity
-  });
-  polygon.setMap(map);
-  polygons.push(polygon);
-}
-
-// ======= Marker & InfoWindow =======
 function addMarker(markerId, latLng, imageSrc, width = 24, height = 30, offsetX = 0, offsetY = 0, infoWindowText) {
   const imageSize = new kakao.maps.Size(width, height);
   const imageOption = { offset: new kakao.maps.Point(offsetX, offsetY) };
-  console.log("🧪 imageSrc:", imageSrc);
   const markerImage = empty(imageSrc) ? null : new kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
 
   latLng = JSON.parse(latLng);
   const position = new kakao.maps.LatLng(latLng.latitude, latLng.longitude);
-  const newMarker = new kakao.maps.Marker({
-    position,
-    image: markerImage
-  });
-
-  //newMarker.setMap(map);
+  const newMarker = new kakao.maps.Marker({ position, image: markerImage });
   markers.push(newMarker);
 
   if (!empty(infoWindowText)) {
@@ -115,34 +58,37 @@ function addMarker(markerId, latLng, imageSrc, width = 24, height = 30, offsetX 
     });
   }
 
-  // 클러스터러에 마커 추가
-  if (clusterer) {
-    clusterer.addMarkers([newMarker]);
-  }
+  if (clusterer) clusterer.addMarkers([newMarker]);
 }
+
 function addMarkersFromList(markerListJson) {
   const markerList = typeof markerListJson === 'string' ? JSON.parse(markerListJson) : markerListJson;
   const newMarkers = [];
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+  if (clusterer) clusterer.clear();
 
   markerList.forEach(item => {
     const latLng = new kakao.maps.LatLng(item.latitude, item.longitude);
-    const newMarker = new kakao.maps.Marker({
-      position: latLng
+    const markerImage = new kakao.maps.MarkerImage(
+      "fireplug.png",                      // 또는 "./fireplug.png"
+      new kakao.maps.Size(24, 24),        // 마커 아이콘 크기
+      { offset: new kakao.maps.Point(12, 30) } // 기준점: 아래 중앙
+    );
+    const marker = new kakao.maps.Marker({
+      position: latLng,
+      image: markerImage
     });
-    newMarker.setMap(map);
-    markers.push(newMarker); // Flutter 측 관리용
-    newMarkers.push(newMarker);
 
-    kakao.maps.event.addListener(newMarker, 'click', function () {
+    kakao.maps.event.addListener(marker, 'click', function () {
       if (infoWindow) infoWindow.close();
-      showInfoWindow(newMarker, item.latitude, item.longitude, item.address);
+      showInfoWindow(marker, item.latitude, item.longitude, item.address);
     });
+    newMarkers.push(marker);
+    markers.push(marker);
   });
 
-  if (clusterer) {
-    clusterer.clear();                // ✅ 이전 마커 제거
-    clusterer.addMarkers(newMarkers); // ✅ 클러스터에 추가
-  }
+  if (clusterer) clusterer.addMarkers(newMarkers);
 }
 
 function showInfoWindow(marker, latitude, longitude, contents = '') {
@@ -157,17 +103,19 @@ function showInfoWindow(marker, latitude, longitude, contents = '') {
   infoWindow.open(map, marker);
 }
 
-// ======= Map Control =======
 function setCenter(latitude, longitude) {
   map.setCenter(new kakao.maps.LatLng(latitude, longitude));
 }
+
 function panTo(latitude, longitude) {
   map.panTo(new kakao.maps.LatLng(latitude, longitude));
 }
+
 function moveCamera(lat, lng, zoomLevel) {
   map.setLevel(zoomLevel);
   map.setCenter(new kakao.maps.LatLng(lat, lng));
 }
+
 function fitBounds(points) {
   const list = JSON.parse(points);
   const bounds = new kakao.maps.LatLngBounds();
@@ -175,7 +123,12 @@ function fitBounds(points) {
   map.setBounds(bounds);
 }
 
-// ======= 장소 검색 =======
+function displayLevel() {
+  if (!map) return;
+  const level = map.getLevel();
+  console.log('📏 현재 지도 레벨:', level);
+}
+
 function searchPlaces(keyword) {
   if (!ps) return console.warn("검색 객체 초기화 안됨");
   infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });
@@ -185,17 +138,10 @@ function searchPlaces(keyword) {
       clearMarker();
       const bounds = new kakao.maps.LatLngBounds();
       data.forEach(place => {
-        // displaySearchMarker(place);
         bounds.extend(new kakao.maps.LatLng(place.y, place.x));
       });
-
-      // 지도 범위를 확장하여 모든 마커가 보이도록 함
       map.setBounds(bounds);
-
-      // 줌 레벨을 적절히 조정 (지도가 너무 확대되지 않도록)
       map.setLevel(5);
-
-      // ✅ 첫 번째 검색 결과로 이동
       if (data.length > 0) {
         const firstPlace = data[0];
         map.panTo(new kakao.maps.LatLng(firstPlace.y, firstPlace.x));
@@ -206,33 +152,13 @@ function searchPlaces(keyword) {
   });
 }
 
-/*
-function displaySearchMarker(place) {
-  const newMarker = new kakao.maps.Marker({
-    map: map,
-    position: new kakao.maps.LatLng(place.y, place.x)
-  });
-
-  kakao.maps.event.addListener(newMarker, 'click', function () {
-    infoWindow.setContent(`<div style="padding:5px;font-size:12px;">${place.place_name}</div>`);
-    infoWindow.open(map, newMarker);
-  });
-
-  markers.push(newMarker);
-}
-*/
-
-// ======= 현재 위치로 이동 함수 추가 =======
 function moveToCurrentLocation(lat, lng) {
   if (map) {
     map.panTo(new kakao.maps.LatLng(lat, lng));
-    if (marker) {
-      marker.setPosition(new kakao.maps.LatLng(lat, lng));
-    }
+    if (marker) marker.setPosition(new kakao.maps.LatLng(lat, lng));
   }
 }
 
-// ======= Flutter Bridge에 함수 노출 =======
 window.moveToCurrentLocationBridge = {
   postMessage: function (message) {
     try {
@@ -251,13 +177,13 @@ window.searchKeywordFlutterBridge = {
   }
 };
 
-// ======= Map Init =======
+// ✅ 이 시점에 SDK가 로드됐을 때만 지도 초기화
 window.onload = function () {
   kakao.maps.load(function () {
     const container = document.getElementById('map');
     const options = {
       center: new kakao.maps.LatLng(37.3626138, 126.9264801),
-      level: 5  // 지도의 기본 줌 레벨을 적당히 설정
+      level: 5
     };
     map = new kakao.maps.Map(container, options);
 
@@ -265,11 +191,10 @@ window.onload = function () {
     infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });
 
     clusterer = new kakao.maps.MarkerClusterer({
-      map: map, // ✅ 클러스터러가 지도를 관리하게 함
+      map: map,
       averageCenter: true,
-      minLevel: 10 // 지도의 최소 줌 레벨이 작을수록 클러스터링 범위가 넓어짐
+      minLevel: 5
     });
-
 
     marker = new kakao.maps.Marker({ position: map.getCenter() });
     marker.setMap(map);
@@ -287,16 +212,19 @@ window.onload = function () {
       const idleLatLng = {
         latitude: latLng.getLat(),
         longitude: latLng.getLng(),
-        zoomLevel: map.getLevel(),
+        zoomLevel: map.getLevel()
       };
       if (typeof cameraIdle !== 'undefined') {
         cameraIdle.postMessage(JSON.stringify(idleLatLng));
       }
     });
+
+    if (window.flutterWebViewReady) {
+      window.flutterWebViewReady.postMessage("map_ready");
+    }
   });
 };
 
-// ======= Empty Check =======
 function empty(value) {
   return (
     value === null ||

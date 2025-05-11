@@ -9,10 +9,10 @@
 
     <!-- Kakao Map SDK -->
     <script type="text/javascript"
-            src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f234bac27d3808570a59571cdce04bf5&libraries=services"></script>
+            src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f234bac27d3808570a59571cdce04bf5&autoload=false&libraries=services,clusterer"></script>
 
     <!-- ✅ 사용자 정의 JS 파일 불러오기 -->
-    <script src="kakaomap.js"></script>
+    <script src="kakaomap.js" defer></script>
 
     <style>
         html, body { margin: 0; padding: 0; height: 100%; }
@@ -29,14 +29,17 @@
 </head>
 
 <body>
-<div id="map"></div>
-<div id="clickLatlng">클릭한 위치 정보가 여기에 표시됩니다.</div>
+    <div id="map"></div>
+    <div id="clickLatlng">클릭한 위치 정보가 여기에 표시됩니다.</div>
 
-<script>
-    // ✅ Flutter에 준비 완료 신호 전송
-    if (window.flutterWebViewReady) {
-        window.flutterWebViewReady.postMessage("map_ready");
-    }
-</script>
+    <script>
+        window.onload = function () {
+            kakao.maps.load(function () {
+                if (window.flutterWebViewReady) {
+                    window.flutterWebViewReady.postMessage("map_ready");
+                }
+            });
+         };
+    </script>
 </body>
 </html>
