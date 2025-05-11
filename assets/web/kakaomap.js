@@ -17,6 +17,10 @@ function clearMarker() {
   markers.forEach(m => m.setMap(null));
   if (infoWindow) infoWindow.close();
   markers = [];
+  // ✅ 클러스터러 초기화 추가!
+    if (clusterer) {
+      clusterer.clear();
+    }
 }
 
 function clearPolyline() {
@@ -92,6 +96,7 @@ function addPolygon(callId, points, holes, strokeWeight, strokeColor, strokeOpac
 function addMarker(markerId, latLng, imageSrc, width = 24, height = 30, offsetX = 0, offsetY = 0, infoWindowText) {
   const imageSize = new kakao.maps.Size(width, height);
   const imageOption = { offset: new kakao.maps.Point(offsetX, offsetY) };
+  console.log("🧪 imageSrc:", imageSrc);
   const markerImage = empty(imageSrc) ? null : new kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
 
   latLng = JSON.parse(latLng);
@@ -114,6 +119,30 @@ function addMarker(markerId, latLng, imageSrc, width = 24, height = 30, offsetX 
   // 클러스터러에 마커 추가
   if (clusterer) {
     clusterer.addMarkers([newMarker]);
+  }
+}
+function addMarkersFromList(markerListJson) {
+  const markerList = typeof markerListJson === 'string' ? JSON.parse(markerListJson) : markerListJson;
+  const newMarkers = [];
+
+  markerList.forEach(item => {
+    const latLng = new kakao.maps.LatLng(item.latitude, item.longitude);
+    const newMarker = new kakao.maps.Marker({
+      position: latLng
+    });
+    newMarker.setMap(map);
+    markers.push(newMarker); // Flutter 측 관리용
+    newMarkers.push(newMarker);
+
+    kakao.maps.event.addListener(newMarker, 'click', function () {
+      if (infoWindow) infoWindow.close();
+      showInfoWindow(newMarker, item.latitude, item.longitude, item.address);
+    });
+  });
+
+  if (clusterer) {
+    clusterer.clear();                // ✅ 이전 마커 제거
+    clusterer.addMarkers(newMarkers); // ✅ 클러스터에 추가
   }
 }
 
@@ -157,7 +186,7 @@ function searchPlaces(keyword) {
       clearMarker();
       const bounds = new kakao.maps.LatLngBounds();
       data.forEach(place => {
-        displaySearchMarker(place);
+        // displaySearchMarker(place);
         bounds.extend(new kakao.maps.LatLng(place.y, place.x));
       });
 
@@ -178,6 +207,7 @@ function searchPlaces(keyword) {
   });
 }
 
+/*
 function displaySearchMarker(place) {
   const newMarker = new kakao.maps.Marker({
     map: map,
@@ -191,6 +221,7 @@ function displaySearchMarker(place) {
 
   markers.push(newMarker);
 }
+*/
 
 // ======= 현재 위치로 이동 함수 추가 =======
 function moveToCurrentLocation(lat, lng) {
@@ -230,8 +261,16 @@ window.onload = function () {
       level: 5  // 지도의 기본 줌 레벨을 적당히 설정
     };
     map = new kakao.maps.Map(container, options);
+
     ps = new kakao.maps.services.Places();
     infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });
+
+    clusterer = new kakao.maps.MarkerClusterer({
+      map: map, // ✅ 클러스터러가 지도를 관리하게 함
+      averageCenter: true,
+      minLevel: 5 // 지도의 최소 줌 레벨이 작을수록 클러스터링 범위가 넓어짐
+    });
+
 
     marker = new kakao.maps.Marker({ position: map.getCenter() });
     marker.setMap(map);

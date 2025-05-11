@@ -385,34 +385,45 @@ class _MapGroupState extends State<MapGroup> {
                     'searchKeywordFlutterBridge.postMessage("$keyword");',
                   );
 
-                  // 2. ✅ 공공데이터 API에서 소화전 정보 가져오기
+                  // 2. ✅ 기존 마커 제거 (JS 함수 호출)
+                  await _kakaoMapController!.evalJavascript('clear();');
+
+                  // 3. ✅ 공공데이터 API에서 소화전 정보 가져오기
                   final hydrantData = await FireHydrantService().fetchHydrantData(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
                   );
+                  print("✅ 첫 번째 hydrant 샘플: ${hydrantData.first}");
 
-                  // 3. ✅ 기존 마커 제거 (JS 함수 호출)
-                  //_kakaoMapController!.evalJavascript('clear();');
-
-
-                  // 4. ✅ 지도에 마커 추가
-                  for (var hydrant in hydrantData) {
-                    final lat = hydrant['LATITUDE'];
-                    final lng = hydrant['LONGITUDE'];
-                    final address = hydrant['RDNMADR'] ?? '위치 정보 없음';
+                  // 4. ✅ 마커 목록 만들기 (유효한 좌표만 필터링)
+                  final markerList = hydrantData
+                      .map((hydrant) {
+                    final lat = double.tryParse(hydrant['latitude']?.toString() ?? '');
+                    final lng = double.tryParse(hydrant['longitude']?.toString() ?? '');
+                    final address = hydrant['rdnmadr'] ?? '위치 정보 없음';
 
                     if (lat != null && lng != null) {
-                      final js = '''
-                        addMarker(
-                          null,
-                          JSON.stringify({latitude: $lat, longitude: $lng}),
-                          null,
-                          24, 30, 0, 0,
-                          "$address"
-                        );
-                      ''';
-                      _kakaoMapController!.evalJavascript(js);
+                      return {
+                        'latitude': lat,
+                        'longitude': lng,
+                        'address': address,
+                      };
                     }
+                    return null;
+                  })
+                      .where((e) => e != null)
+                      .toList();
+
+                  // 5. ✅ JS에 한 번에 전달
+                  final js = '''
+                  addMarkersFromList(${jsonEncode(markerList)});
+                  ''';
+
+                  try {
+                    print("🧪 실행할 JS (일괄 전송): ${js.substring(0, 300)}..."); // 너무 길면 일부만 출력
+                    await _kakaoMapController!.evalJavascript(js);
+                  } catch (e) {
+                    print("❌ JS 실행 오류: $e");
                   }
                 }
               },
