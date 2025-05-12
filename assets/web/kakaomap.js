@@ -1,7 +1,3 @@
-// ✅ kakao.maps.load를 사용하려면 autoload=false 옵션 필요
-// HTML에서 sdk.js를 다음과 같이 수정해야 함:
-// <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=...&autoload=false&libraries=services,clusterer" defer></script>
-
 let map = null;
 let ps = null;
 let infoWindow = null;
