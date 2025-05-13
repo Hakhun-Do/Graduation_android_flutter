@@ -69,3 +69,60 @@ class FireHydrantService {
     return filteredHydrants;
   }
 }
+class FireTruckZoneService {
+  final String serviceKey = '28k6dj2VzcV4Bgng3CN931SanEKlVifOCPTFQ%2FaOF%2BLhVB3gH1YztmmiClWwCeFaviTXIRrZvGFGgkYRiIsipQ%3D%3D';
+
+  Future<List<Map<String, dynamic>>> fetchFireTruckZones({
+    required String ctprvnNm,
+    String? signguNm,
+    String? districtNm,
+    int numOfRows = 100,
+  }) async {
+    final baseUrl = 'http://api.data.go.kr/openapi/tn_pubr_public_fgtcar_prkarea_api';
+    int page = 1;
+    List<Map<String, dynamic>> allZones = [];
+
+    while (true) {
+      final uri = Uri.parse(
+          '$baseUrl'
+              '?serviceKey=$serviceKey'
+              '&pageNo=$page'
+              '&numOfRows=$numOfRows'
+              '&type=json'
+              '&CTPRVN_NM=${Uri.encodeComponent(ctprvnNm)}'
+              '${signguNm != null ? '&SIGNGU_NM=${Uri.encodeComponent(signguNm)}' : ''}'
+      );
+
+      try {
+        final response = await http.get(uri, headers: {'Content-Type': 'application/json'});
+
+        if (response.statusCode == 200) {
+          final jsonBody = json.decode(response.body);
+          final body = jsonBody['response']?['body'];
+          if (body == null || body['items'] == null) break;
+
+          final items = body['items'] as List;
+          allZones.addAll(items.cast<Map<String, dynamic>>());
+
+          if (items.length < numOfRows) break;
+          page++;
+        } else {
+          print('❌ FireTruck API 응답 오류: ${response.statusCode}');
+          break;
+        }
+      } catch (e) {
+        print('❌ 예외 발생 (FireTruck): $e');
+        break;
+      }
+    }
+    print('✅ 소방차 전용구역 ${allZones.length}개 받아옴');
+    final filtered = allZones.where((zone) {
+      final address = zone['lnmadr'] ?? '';
+      return districtNm == null || address.contains(districtNm);
+    }).toList();
+
+    print('🚒 소방차 전용구역 개수: ${filtered.length}');
+    return filtered;
+  }
+}
+

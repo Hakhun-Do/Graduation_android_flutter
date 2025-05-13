@@ -66,26 +66,28 @@ function addMarkersFromList(markerListJson) {
 
   markerList.forEach(item => {
     const latLng = new kakao.maps.LatLng(item.latitude, item.longitude);
+
+    // ✅ 마커 종류에 따라 이미지 변경
     const markerImage = new kakao.maps.MarkerImage(
-      "fireplug.png",                      // 또는 "./fireplug.png"
-      new kakao.maps.Size(24, 24),        // 마커 아이콘 크기
-      { offset: new kakao.maps.Point(12, 30) } // 기준점: 아래 중앙
+      item.type === 'firetruck' ? "firetruck.png" : "fireplug.png",
+      new kakao.maps.Size(24, 24),
+      { offset: new kakao.maps.Point(12, 30) }
     );
-    const marker = new kakao.maps.Marker({
-      position: latLng,
-      image: markerImage
-    });
+
+    const marker = new kakao.maps.Marker({ position: latLng, image: markerImage });
 
     kakao.maps.event.addListener(marker, 'click', function () {
       if (infoWindow) infoWindow.close();
       showInfoWindow(marker, item.latitude, item.longitude, item.address);
     });
+
     newMarkers.push(marker);
     markers.push(marker);
   });
 
   if (clusterer) clusterer.addMarkers(newMarkers);
 }
+
 
 function showInfoWindow(marker, latitude, longitude, contents = '') {
   const iwContent = `<div style="padding:5px;">${contents}</div>`;

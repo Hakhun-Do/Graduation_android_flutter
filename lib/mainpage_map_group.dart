@@ -388,40 +388,71 @@ class _MapGroupState extends State<MapGroup> {
                   // 2. ✅ 기존 마커 제거 (JS 함수 호출)
                   await _kakaoMapController!.evalJavascript('clear();');
 
-                  // 3. ✅ 공공데이터 API에서 소화전 정보 가져오기
-                  final hydrantData = await FireHydrantService().fetchHydrantData(
+                  // Future 객체들을 변수로 준비
+                  final Future<List<Map<String, dynamic>>> hydrantFuture =
+                  FireHydrantService().fetchHydrantData(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
                     districtNm: _selectedDistrict,
                   );
-                  print("✅ 첫 번째 hydrant 샘플: ${hydrantData.first}");
 
-                  // 4. ✅ 마커 목록 만들기 (유효한 좌표만 필터링)
-                  final markerList = hydrantData
-                      .map((hydrant) {
+                  final Future<List<Map<String, dynamic>>> truckFuture =
+                  FireTruckZoneService().fetchFireTruckZones(
+                    ctprvnNm: _selectedCity!,
+                    signguNm: _selectedTown,
+                    districtNm: _selectedDistrict,
+                  );
+
+                  // 여기서 Future 객체들을 동시에 실행
+                  final results = await Future.wait([
+                    hydrantFuture,
+                    truckFuture,
+                  ]);
+
+                  // 결과 꺼내기
+                  final hydrantData = results[0];
+                  final truckData = results[1];
+
+
+                  // 필터링은 UI thread에서 너무 오래 걸리지 않게 간단 처리
+                  final hydrantMarkers = hydrantData.map((hydrant) {
                     final lat = double.tryParse(hydrant['latitude']?.toString() ?? '');
                     final lng = double.tryParse(hydrant['longitude']?.toString() ?? '');
                     final address = hydrant['rdnmadr'] ?? '위치 정보 없음';
-
                     if (lat != null && lng != null) {
                       return {
                         'latitude': lat,
                         'longitude': lng,
                         'address': address,
+                        'type': 'hydrant',
                       };
                     }
                     return null;
-                  })
-                      .where((e) => e != null)
-                      .toList();
+                  }).whereType<Map<String, dynamic>>().toList();
 
-                  // 5. ✅ JS에 한 번에 전달
+                  final truckMarkers = truckData.map((zone) {
+                    final lat = double.tryParse(zone['latitude']?.toString() ?? '');
+                    final lng = double.tryParse(zone['longitude']?.toString() ?? '');
+                    final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    if (lat != null && lng != null) {
+                      return {
+                        'latitude': lat,
+                        'longitude': lng,
+                        'address': address,
+                        'type': 'firetruck',
+                      };
+                    }
+                    return null;
+                  }).whereType<Map<String, dynamic>>().toList();
+
+                  final allMarkers = [...hydrantMarkers, ...truckMarkers];
+
                   final js = '''
-                  addMarkersFromList(${jsonEncode(markerList)});
+                    addMarkersFromList(${jsonEncode(allMarkers)});
                   ''';
 
                   try {
-                    print("🧪 실행할 JS (일괄 전송): ${js.substring(0, 300)}..."); // 너무 길면 일부만 출력
+                    print("🧪 마커 JS 전송: ${js.substring(0, 300)}...");
                     await _kakaoMapController!.evalJavascript(js);
                   } catch (e) {
                     print("❌ JS 실행 오류: $e");
