@@ -66,10 +66,19 @@ function addMarkersFromList(markerListJson) {
 
   markerList.forEach(item => {
     const latLng = new kakao.maps.LatLng(item.latitude, item.longitude);
+    let imageSrc;
 
     // ✅ 마커 종류에 따라 이미지 변경
+    if (item.type === 'firetruck') {
+      imageSrc = 'firetruck.png';
+    } else if (item.type === 'hydrant') {
+      imageSrc = 'fireplug.png';
+    } else if (item.type === 'problem') {
+      imageSrc = 'problem.png';
+    }
+
     const markerImage = new kakao.maps.MarkerImage(
-      item.type === 'firetruck' ? "firetruck.png" : "fireplug.png",
+      imageSrc,
       new kakao.maps.Size(24, 24),
       { offset: new kakao.maps.Point(12, 30) }
     );

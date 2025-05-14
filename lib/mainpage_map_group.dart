@@ -7,6 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:graduation_project/api_data.dart';
 
+import 'api_service.dart';
+
 
 class MapGroup extends StatefulWidget {
   const MapGroup({super.key});
@@ -403,15 +405,23 @@ class _MapGroupState extends State<MapGroup> {
                     districtNm: _selectedDistrict,
                   );
 
+                  final Future<List<Map<String, dynamic>>> markerdbFuture =
+                  MarkerDbService().fetchMarkerData(
+                    ctprvnNm: _selectedCity!,
+                    signguNm: _selectedTown,
+                  );
+
                   // 여기서 Future 객체들을 동시에 실행
                   final results = await Future.wait([
                     hydrantFuture,
                     truckFuture,
+                    markerdbFuture,
                   ]);
 
                   // 결과 꺼내기
                   final hydrantData = results[0];
                   final truckData = results[1];
+                  final markerdbData = results[2];
 
 
                   // 필터링은 UI thread에서 너무 오래 걸리지 않게 간단 처리
@@ -445,7 +455,22 @@ class _MapGroupState extends State<MapGroup> {
                     return null;
                   }).whereType<Map<String, dynamic>>().toList();
 
-                  final allMarkers = [...hydrantMarkers, ...truckMarkers];
+                  final markerdbMarkers = markerdbData.map((zone) {
+                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    if (lat != null && lng != null) {
+                      return {
+                        'latitude': lat,
+                        'longitude': lng,
+                        //'address': address,
+                        'type': 'problem',
+                      };
+                    }
+                    return null;
+                  }).whereType<Map<String, dynamic>>().toList();
+
+                  final allMarkers = [...hydrantMarkers, ...truckMarkers, ...markerdbMarkers];
 
                   final js = '''
                     addMarkersFromList(${jsonEncode(allMarkers)});

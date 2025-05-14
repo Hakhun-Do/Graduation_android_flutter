@@ -230,3 +230,61 @@ class ApiService {
     }
   }
 }
+
+class MarkerDbService {
+
+  Future<List<Map<String, dynamic>>> fetchMarkerData({
+    required String ctprvnNm, // 시도명
+    String? signguNm, // 시군구명
+    //String? districtNm, //구읍면명
+    //int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
+  }) async {
+    final url = 'http://175.106.98.190:1040/pin/all';
+    //int page = 1;
+    List<Map<String, dynamic>> allMarkerDb = [];
+
+    while (true) {
+      final uri = Uri.parse(
+          '$url'
+              //'&pageNo=$page'
+              //'&numOfRows=$numOfRows'
+              //'&type=json'
+              '?ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
+              '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}'
+      );
+
+      try {
+        final response = await http.get(uri, headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0',
+        });
+
+        if (response.statusCode == 200) {
+          try {
+            final jsonBody = json.decode(response.body);
+
+            // 응답이 바로 List 형태인지 확인
+            if (jsonBody is List) {
+              allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
+            } else {
+              print('❌ 예상과 다른 응답 형태입니다: ${jsonBody.runtimeType}');
+            }
+          } catch (e) {
+            print('❌ JSON 파싱 중 예외 발생: $e');
+          }
+        } else {
+          print('❌ 서버 응답 오류: ${response.statusCode}');
+          print('본문: ${response.body}');
+          break;
+        }
+      } catch (e) {
+        print('❌ 예외 발생: $e');
+        break;
+      }
+    }
+
+    print('✅ DB마커 ${allMarkerDb.length}개 받아옴');
+
+    return allMarkerDb;
+  }
+}
