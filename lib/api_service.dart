@@ -231,9 +231,9 @@ class ApiService {
   }
 }
 
-class MarkerDbService {
+class ProblemMarkerService { // 서버 DB에서 통행불가 마커 요청
 
-  Future<List<Map<String, dynamic>>> fetchMarkerData({
+  Future<List<Map<String, dynamic>>> fetchProblemData({
     required String ctprvnNm, // 시도명
     String? signguNm, // 시군구명
     //String? districtNm, //구읍면명
@@ -245,7 +245,8 @@ class MarkerDbService {
 
     final uri = Uri.parse(
       '$url'
-          '?ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
+          '?cat=통행불가'
+          '&ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
           '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}',
     );
 
@@ -274,7 +275,154 @@ class MarkerDbService {
       print('❌ 예외 발생: $e');
     }
 
-    print('✅ DB마커 ${allMarkerDb.length}개 받아옴');
+    print('✅ (DB) 통행불가 마커 ${allMarkerDb.length}개 받아옴');
+    return allMarkerDb;
+  }
+}
+
+class BreakdownMarkerService { // 서버 DB에서 이상 마커 요청
+
+  Future<List<Map<String, dynamic>>> fetchBreakdownData({
+    required String ctprvnNm, // 시도명
+    String? signguNm, // 시군구명
+    //String? districtNm, //구읍면명
+    //int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
+  }) async {
+    final url = 'http://175.106.98.190:1040/pin/all';
+    //int page = 1;
+    List<Map<String, dynamic>> allMarkerDb = [];
+
+    final uri = Uri.parse(
+      '$url'
+          '?cat=이상'
+          '&ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
+          '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}',
+    );
+
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+      });
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonBody = json.decode(response.body);
+          if (jsonBody is List) {
+            allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
+          } else {
+            print('❌ 예상과 다른 응답 형태입니다: ${jsonBody.runtimeType}');
+          }
+        } catch (e) {
+          print('❌ JSON 파싱 중 예외 발생: $e');
+        }
+      } else {
+        print('❌ 서버 응답 오류: ${response.statusCode}');
+        print('본문: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ 예외 발생: $e');
+    }
+
+    print('✅ (DB) 이상 마커 ${allMarkerDb.length}개 받아옴');
+    return allMarkerDb;
+  }
+}
+
+class HydrantAddMarkerService { // 서버 DB에서 소방용수시설 추가 마커 요청
+
+  Future<List<Map<String, dynamic>>> fetchHydrantAddData({
+    required String ctprvnNm, // 시도명
+    String? signguNm, // 시군구명
+    //String? districtNm, //구읍면명
+    //int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
+  }) async {
+    final url = 'http://175.106.98.190:1040/pin/all';
+    //int page = 1;
+    List<Map<String, dynamic>> allMarkerDb = [];
+
+    final uri = Uri.parse(
+      '$url'
+          '?cat=소방용수시설추가'
+          '&ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
+          '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}',
+    );
+
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+      });
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonBody = json.decode(response.body);
+          if (jsonBody is List) {
+            allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
+          } else {
+            print('❌ 예상과 다른 응답 형태입니다: ${jsonBody.runtimeType}');
+          }
+        } catch (e) {
+          print('❌ JSON 파싱 중 예외 발생: $e');
+        }
+      } else {
+        print('❌ 서버 응답 오류: ${response.statusCode}');
+        print('본문: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ 예외 발생: $e');
+    }
+
+    print('✅ (DB) 소방용수시설추가 마커 ${allMarkerDb.length}개 받아옴');
+    return allMarkerDb;
+  }
+}
+
+class TruckAddMarkerService { // 서버 DB에서 소방차전용구역 추가 마커 요청
+
+  Future<List<Map<String, dynamic>>> fetchTruckAddData({
+    required String ctprvnNm, // 시도명
+    String? signguNm, // 시군구명
+    //String? districtNm, //구읍면명
+    //int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
+  }) async {
+    final url = 'http://175.106.98.190:1040/pin/all';
+    //int page = 1;
+    List<Map<String, dynamic>> allMarkerDb = [];
+
+    final uri = Uri.parse(
+      '$url'
+          '?cat=소방차전용구역추가'
+          '&ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
+          '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}',
+    );
+
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+      });
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonBody = json.decode(response.body);
+          if (jsonBody is List) {
+            allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
+          } else {
+            print('❌ 예상과 다른 응답 형태입니다: ${jsonBody.runtimeType}');
+          }
+        } catch (e) {
+          print('❌ JSON 파싱 중 예외 발생: $e');
+        }
+      } else {
+        print('❌ 서버 응답 오류: ${response.statusCode}');
+        print('본문: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ 예외 발생: $e');
+    }
+
+    print('✅ (DB) 소방차전용구역추가 마커 ${allMarkerDb.length}개 받아옴');
     return allMarkerDb;
   }
 }

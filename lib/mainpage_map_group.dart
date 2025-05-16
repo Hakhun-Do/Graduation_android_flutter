@@ -396,33 +396,56 @@ class _MapGroupState extends State<MapGroup> {
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
                     districtNm: _selectedDistrict,
-                  );
+                  ); // 소방용수시설
 
                   final Future<List<Map<String, dynamic>>> truckFuture =
                   FireTruckZoneService().fetchFireTruckZones(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
                     districtNm: _selectedDistrict,
-                  );
+                  ); // 소방차전용구역
 
-                  final Future<List<Map<String, dynamic>>> markerdbFuture =
-                  MarkerDbService().fetchMarkerData(
+                  final Future<List<Map<String, dynamic>>> problemFuture =
+                  ProblemMarkerService().fetchProblemData(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
-                  );
+                  ); // 통행불가
+
+                  final Future<List<Map<String, dynamic>>> breakdownFuture =
+                  BreakdownMarkerService().fetchBreakdownData(
+                    ctprvnNm: _selectedCity!,
+                    signguNm: _selectedTown,
+                  ); // 고장, 이상
+
+                  final Future<List<Map<String, dynamic>>> hydrantAddFuture =
+                  HydrantAddMarkerService().fetchHydrantAddData(
+                    ctprvnNm: _selectedCity!,
+                    signguNm: _selectedTown,
+                  ); // 소방용수시설 추가
+
+                  final Future<List<Map<String, dynamic>>> truckAddFuture =
+                  TruckAddMarkerService().fetchTruckAddData(
+                    ctprvnNm: _selectedCity!,
+                    signguNm: _selectedTown,
+                  ); // 소방차전용구역 추가
 
                   // 여기서 Future 객체들을 동시에 실행
                   final results = await Future.wait([
                     hydrantFuture,
                     truckFuture,
-                    markerdbFuture,
+                    problemFuture,
+                    breakdownFuture,
+                    hydrantAddFuture,
+                    truckAddFuture,
                   ]);
 
                   // 결과 꺼내기
                   final hydrantData = results[0];
                   final truckData = results[1];
-                  final markerdbData = results[2];
-
+                  final problemData = results[2];
+                  final breakdownData = results[3];
+                  final hydrantAddData = results[4];
+                  final truckAddData = results[5];
 
                   // 필터링은 UI thread에서 너무 오래 걸리지 않게 간단 처리
                   final hydrantMarkers = hydrantData.map((hydrant) {
@@ -455,7 +478,7 @@ class _MapGroupState extends State<MapGroup> {
                     return null;
                   }).whereType<Map<String, dynamic>>().toList();
 
-                  final markerdbMarkers = markerdbData.map((zone) {
+                  final problemMarkers = problemData.map((zone) {
                     final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
                     final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
                     //final address = zone['lnmadr'] ?? '위치 정보 없음';
@@ -470,7 +493,52 @@ class _MapGroupState extends State<MapGroup> {
                     return null;
                   }).whereType<Map<String, dynamic>>().toList();
 
-                  final allMarkers = [...hydrantMarkers, ...truckMarkers, ...markerdbMarkers];
+                  final breakdownMarkers = breakdownData.map((zone) {
+                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    if (lat != null && lng != null) {
+                      return {
+                        'latitude': lat,
+                        'longitude': lng,
+                        //'address': address,
+                        'type': 'breakdown',
+                      };
+                    }
+                    return null;
+                  }).whereType<Map<String, dynamic>>().toList();
+
+                  final hydrantAddMarkers = hydrantAddData.map((zone) {
+                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    if (lat != null && lng != null) {
+                      return {
+                        'latitude': lat,
+                        'longitude': lng,
+                        //'address': address,
+                        'type': 'hydrantAdd',
+                      };
+                    }
+                    return null;
+                  }).whereType<Map<String, dynamic>>().toList();
+
+                  final truckAddMarkers = truckAddData.map((zone) {
+                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    if (lat != null && lng != null) {
+                      return {
+                        'latitude': lat,
+                        'longitude': lng,
+                        //'address': address,
+                        'type': 'truckAdd',
+                      };
+                    }
+                    return null;
+                  }).whereType<Map<String, dynamic>>().toList();
+
+                  final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...breakdownMarkers, ...hydrantAddMarkers, ...truckAddMarkers,];
 
                   final js = '''
                     addMarkersFromList(${jsonEncode(allMarkers)});

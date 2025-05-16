@@ -75,6 +75,12 @@ function addMarkersFromList(markerListJson) {
       imageSrc = 'fireplug.png';
     } else if (item.type === 'problem') {
       imageSrc = 'problem.png';
+    } else if (item.type === 'breakdown') {
+      imageSrc = 'breakdown.png';
+    } else if (item.type === 'hydrantAdd') {
+      imageSrc = 'fireplug_add.png';
+    } else if (item.type === 'truckAdd') {
+      imageSrc = 'fireturck_add.png';
     }
 
     const markerImage = new kakao.maps.MarkerImage(
