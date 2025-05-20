@@ -297,7 +297,7 @@ class _MapGroupState extends State<MapGroup> {
 
       // 카카오 맵 api의 좌표를 주소로 변환해 주는 기능 요청하는 함수
       Future<Map<String, String>> getAddressFromCoordinates(double lat, double lng) async {
-        const String kakaoApiKey = '0f55f4dd959e3d05d8414e9896e24110';
+        const String kakaoApiKey = '206075c96a586adaec930981a17a3668';
         final url = Uri.parse('https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
 
         final response = await http.get(
