@@ -7,7 +7,7 @@ class FireHydrantService {
   Future<List<Map<String, dynamic>>> fetchHydrantData({
     required String ctprvnNm, // 시도명
     String? signguNm, // 시군구명
-    String? districtNm, //구읍면명
+    // String? districtNm, // 동읍면명
     int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
   }) async {
     final baseUrl = 'http://api.data.go.kr/openapi/tn_pubr_public_ffus_wtrcns_api';
@@ -75,7 +75,7 @@ class FireTruckZoneService {
   Future<List<Map<String, dynamic>>> fetchFireTruckZones({
     required String ctprvnNm,
     String? signguNm,
-    String? districtNm,
+    // String? districtNm,
     int numOfRows = 100,
   }) async {
     final baseUrl = 'http://api.data.go.kr/openapi/tn_pubr_public_fgtcar_prkarea_api';

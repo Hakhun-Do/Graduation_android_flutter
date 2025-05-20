@@ -293,6 +293,175 @@ class _MapGroupState extends State<MapGroup> {
       await _webViewController.runJavaScript(
         'panTo(${position.latitude}, ${position.longitude});',
       );
+
+      /*
+      // gps 이동후 해당 지역 마커 표시
+
+      _selectedCity = null;
+      _selectedTown = null;
+
+      // 2. ✅ 기존 마커 제거 (JS 함수 호출)
+      await _kakaoMapController!.evalJavascript('clear();');
+
+      // Future 객체들을 변수로 준비
+      final Future<List<Map<String, dynamic>>> hydrantFuture =
+      FireHydrantService().fetchHydrantData(
+        ctprvnNm: _selectedCity!,
+        signguNm: _selectedTown,
+      ); // 소방용수시설
+
+      final Future<List<Map<String, dynamic>>> truckFuture =
+      FireTruckZoneService().fetchFireTruckZones(
+        ctprvnNm: _selectedCity!,
+        signguNm: _selectedTown,
+      ); // 소방차전용구역
+
+      final Future<List<Map<String, dynamic>>> problemFuture =
+      ProblemMarkerService().fetchProblemData(
+        ctprvnNm: _selectedCity!,
+        signguNm: _selectedTown,
+      ); // 통행불가
+
+      final Future<List<Map<String, dynamic>>> breakdownFuture =
+      BreakdownMarkerService().fetchBreakdownData(
+        ctprvnNm: _selectedCity!,
+        signguNm: _selectedTown,
+      ); // 고장, 이상
+
+      final Future<List<Map<String, dynamic>>> hydrantAddFuture =
+      HydrantAddMarkerService().fetchHydrantAddData(
+        ctprvnNm: _selectedCity!,
+        signguNm: _selectedTown,
+      ); // 소방용수시설 추가
+
+      final Future<List<Map<String, dynamic>>> truckAddFuture =
+      TruckAddMarkerService().fetchTruckAddData(
+        ctprvnNm: _selectedCity!,
+        signguNm: _selectedTown,
+      ); // 소방차전용구역 추가
+
+      // 여기서 Future 객체들을 동시에 실행
+      final results = await Future.wait([
+        hydrantFuture,
+        truckFuture,
+        problemFuture,
+        breakdownFuture,
+        hydrantAddFuture,
+        truckAddFuture,
+      ]);
+
+      // 결과 꺼내기
+      final hydrantData = results[0];
+      final truckData = results[1];
+      final problemData = results[2];
+      final breakdownData = results[3];
+      final hydrantAddData = results[4];
+      final truckAddData = results[5];
+
+      // 필터링은 UI thread에서 너무 오래 걸리지 않게 간단 처리
+      final hydrantMarkers = hydrantData.map((hydrant) {
+        final lat = double.tryParse(hydrant['latitude']?.toString() ?? '');
+        final lng = double.tryParse(hydrant['longitude']?.toString() ?? '');
+        final address = hydrant['rdnmadr'] ?? '위치 정보 없음';
+        if (lat != null && lng != null) {
+          return {
+            'latitude': lat,
+            'longitude': lng,
+            'address': address,
+            'type': 'hydrant',
+          };
+        }
+        return null;
+      }).whereType<Map<String, dynamic>>().toList();
+
+      final truckMarkers = truckData.map((zone) {
+        final lat = double.tryParse(zone['latitude']?.toString() ?? '');
+        final lng = double.tryParse(zone['longitude']?.toString() ?? '');
+        final address = zone['lnmadr'] ?? '위치 정보 없음';
+        if (lat != null && lng != null) {
+          return {
+            'latitude': lat,
+            'longitude': lng,
+            'address': address,
+            'type': 'firetruck',
+          };
+        }
+        return null;
+      }).whereType<Map<String, dynamic>>().toList();
+
+      final problemMarkers = problemData.map((zone) {
+        final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+        final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        if (lat != null && lng != null) {
+          return {
+            'latitude': lat,
+            'longitude': lng,
+            //'address': address,
+            'type': 'problem',
+          };
+        }
+        return null;
+      }).whereType<Map<String, dynamic>>().toList();
+
+      final breakdownMarkers = breakdownData.map((zone) {
+        final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+        final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        if (lat != null && lng != null) {
+          return {
+            'latitude': lat,
+            'longitude': lng,
+            //'address': address,
+            'type': 'breakdown',
+          };
+        }
+        return null;
+      }).whereType<Map<String, dynamic>>().toList();
+
+      final hydrantAddMarkers = hydrantAddData.map((zone) {
+        final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+        final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        if (lat != null && lng != null) {
+          return {
+            'latitude': lat,
+            'longitude': lng,
+            //'address': address,
+            'type': 'hydrantAdd',
+          };
+        }
+        return null;
+      }).whereType<Map<String, dynamic>>().toList();
+
+      final truckAddMarkers = truckAddData.map((zone) {
+        final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
+        final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
+        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        if (lat != null && lng != null) {
+          return {
+            'latitude': lat,
+            'longitude': lng,
+            //'address': address,
+            'type': 'truckAdd',
+          };
+        }
+        return null;
+      }).whereType<Map<String, dynamic>>().toList();
+
+      final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...breakdownMarkers, ...hydrantAddMarkers, ...truckAddMarkers,];
+
+      final js = '''
+                    addMarkersFromList(${jsonEncode(allMarkers)});
+                  ''';
+
+      try {
+        print("🧪 마커 JS 전송: ${js.substring(0, 300)}...");
+        await _kakaoMapController!.evalJavascript(js);
+      } catch (e) {
+        print("❌ JS 실행 오류: $e");
+      }
+      */
     } catch (e) {
       print("❌ 내 위치로 이동 중 오류 발생: $e");
     }
@@ -395,14 +564,12 @@ class _MapGroupState extends State<MapGroup> {
                   FireHydrantService().fetchHydrantData(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
-                    districtNm: _selectedDistrict,
                   ); // 소방용수시설
 
                   final Future<List<Map<String, dynamic>>> truckFuture =
                   FireTruckZoneService().fetchFireTruckZones(
                     ctprvnNm: _selectedCity!,
                     signguNm: _selectedTown,
-                    districtNm: _selectedDistrict,
                   ); // 소방차전용구역
 
                   final Future<List<Map<String, dynamic>>> problemFuture =
