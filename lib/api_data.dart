@@ -60,13 +60,13 @@ class FireHydrantService {
     }
 
     print('✅ 총 소화전 ${allHydrants.length}개 받아옴');
-    final filteredHydrants = allHydrants.where((hydrant) {
+    /*final filteredHydrants = allHydrants.where((hydrant) {
       final address = hydrant['lnmadr'] ?? '';
       return districtNm == null || address.contains(districtNm); // 원하는 동명으로 교체 가능
     }).toList();
-
-    print('🔍 ${districtNm ?? '전체'} 소화전 개수: ${filteredHydrants.length}');
-    return filteredHydrants;
+    // 동읍면 기준 필터 제거
+    print('🔍 ${districtNm ?? '전체'} 소화전 개수: ${filteredHydrants.length}');*/
+    return allHydrants;
   }
 }
 class FireTruckZoneService {
@@ -116,13 +116,13 @@ class FireTruckZoneService {
       }
     }
     print('✅ 소방차 전용구역 ${allZones.length}개 받아옴');
-    final filtered = allZones.where((zone) {
+    /*final filtered = allZones.where((zone) {
       final address = zone['lnmadr'] ?? '';
       return districtNm == null || address.contains(districtNm);
     }).toList();
-
-    print('🚒 소방차 전용구역 개수: ${filtered.length}');
-    return filtered;
+    // 동읍면 기준 필터 제거
+    print('🚒 소방차 전용구역 개수: ${filtered.length}');*/
+    return allZones;
   }
 }
 
