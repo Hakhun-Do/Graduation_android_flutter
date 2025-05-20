@@ -6,6 +6,7 @@ import 'package:graduation_project/src/model/lat_lng.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:graduation_project/api_data.dart';
+import 'package:http/http.dart' as http;
 
 import 'api_service.dart';
 
@@ -294,11 +295,40 @@ class _MapGroupState extends State<MapGroup> {
         'panTo(${position.latitude}, ${position.longitude});',
       );
 
-      /*
-      // gps 이동후 해당 지역 마커 표시
+      // 카카오 맵 api의 좌표를 주소로 변환해 주는 기능 요청하는 함수
+      Future<Map<String, String>> getAddressFromCoordinates(double lat, double lng) async {
+        const String kakaoApiKey = '0f55f4dd959e3d05d8414e9896e24110';
+        final url = Uri.parse('https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
 
-      _selectedCity = null;
-      _selectedTown = null;
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'KakaoAK $kakaoApiKey',
+            'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp', // 최소한 이 형식 유지
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final regionInfo = data['documents'][0];
+          final city = regionInfo['region_1depth_name'];
+          final town = regionInfo['region_2depth_name'];
+          print('✅ GPS 좌표 주소 변환 결과 값 : $regionInfo');
+          return {
+            'city': city,
+            'town': town,
+          };
+        } else {
+          throw Exception('주소 변환 실패: ${response.body}');
+        }
+      }
+
+      // gps 이동후 해당 지역 마커 표시
+      // 좌표로 변환 받은
+      final addressInfo = await getAddressFromCoordinates(position.latitude, position.longitude);
+
+      _selectedCity = addressInfo['city'];
+      _selectedTown = addressInfo['town'];
 
       // 2. ✅ 기존 마커 제거 (JS 함수 호출)
       await _kakaoMapController!.evalJavascript('clear();');
@@ -461,7 +491,7 @@ class _MapGroupState extends State<MapGroup> {
       } catch (e) {
         print("❌ JS 실행 오류: $e");
       }
-      */
+
     } catch (e) {
       print("❌ 내 위치로 이동 중 오류 발생: $e");
     }
