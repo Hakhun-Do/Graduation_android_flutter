@@ -8,6 +8,9 @@ let circles = [];
 let polygons = [];
 let clusterer = null;
 
+let hydrantcommentOverlay = null;
+let firetruckcommentOverlay = null;
+
 function clearMarker() {
   markers.forEach(m => m.setMap(null));
   if (infoWindow) infoWindow.close();
@@ -97,7 +100,7 @@ function addMarkersFromList(markerListJson) {
         marker,
         item.latitude,
         item.longitude,
-        item.address || '',
+        item,
         item.id,
         item.type
       );
@@ -110,30 +113,49 @@ function addMarkersFromList(markerListJson) {
   if (clusterer) clusterer.addMarkers(newMarkers);
 }
 
-function showInfoWindow(marker, latitude, longitude, contents = '', markerId = null, type = '') {
-  // 타입별로 오버레이 내용 다르게 생성
-  let iwContent = '';
+function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null, type = '') {
+  // 기존 InfoWindow 및 코멘트창 닫기
+  if (infoWindow) infoWindow.close();
+  if (hydrantcommentOverlay) hydrantcommentOverlay.setMap(null);
 
+  // 타입별 콘텐츠 생성
+  let iwContent = '';
   if (type === 'hydrant') {
     iwContent = `
-      <div style="padding:5px;">
-        <b>소화전</b><br>${contents}
-        <div style="margin-top:8px; text-align:right;">
-          <button id="editBtn" style="margin-right:6px;">수정</button>
-          <button id="deleteBtn">삭제</button>
+      <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
+        <b style="font-size:16px; color:#2c3e50;">소화전 상세정보</b>
+        <hr style="margin:6px 0; border-color:#eee;">
+        <div style="font-size:14px; line-height:1.5;">
+          <b>📍 소재지지번주소:</b> ${item.lnmadr || '-'}<br>
+          <b>📌 상세위치:</b> ${item.descLc || '-'}<br>
+          <b>🛡️ 보호틀유무:</b> ${item.prtcYn === 'Y' ? '있음' : (item.prtcYn === 'N' ? '없음' : '-')}<br>
+          <b>🏢 관할기관명:</b> ${item.institutionNm || '-'}<br>
+          <b>📞 전화번호:</b> ${item.institutionPhoneNumber || '-'}<br>
+          <b>📅 데이터기준일자:</b> ${item.referenceDate || '-'}
         </div>
       </div>
     `;
   } else if (type === 'firetruck') {
-    iwContent = `
-      <div style="padding:5px;">
-        🚒 <b>소방차 전용구역</b><br>${contents}
-        <div style="margin-top:8px; text-align:right;">
-          <button id="reportBtn">신고</button>
+     iwContent = `
+       <div style="padding:5px;">
+         🚒 <b>소방차 전용구역</b>
+         <hr style="margin:4px 0;">
+          <div style="font-size:14px; line-height:1.5;">
+            <b>📍 소재지지번주소:</b> ${item.lnmadr || '-'}<br>
+            <b>🅿️ 전용주차구획:</b> ${item.prkcmprt || '-'}개<br>
+            <b>🏢 공동주택명:</b> ${item.copertnHouseNm || '-'}<br>
+            <b>🔢 동번호:</b> ${item.dongNo || '-'}<br>
+            <b>📞 관리소 연락처:</b> ${item.aphusPhoneNumber || '-'}<br>
+            <b>🚒 관할소방서:</b> ${item.institutionNm || '-'}<br>
+            <b>☎️ 소방서 전화:</b> ${item.institutionPhoneNumber || '-'}<br>
+            <b>📅 데이터 기준일:</b> ${item.referenceDate || '-'}
+          </div>
+          <div style="margin-top:8px; text-align:right;">
+            <button id="reportBtn">신고</button>
+          </div>
         </div>
-      </div>
-    `;
-  } else if (type === 'problem') {
+      `;
+    } else if (type === 'problem') {
     iwContent = `
       <div style="padding:5px;">
         <b>통행불가 위치</b><br>${contents}
@@ -173,6 +195,39 @@ function showInfoWindow(marker, latitude, longitude, contents = '', markerId = n
     removable: true
   });
   infoWindow.open(map, marker);
+
+  // 코멘트창 띄우기
+  if (type === 'hydrant') {
+    showHydrantCommentOverlay(latitude, longitude, `
+      <div style="background:#fff3cd;border:1px solid #ffeeba;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px #aaa;">
+        💬 이 소화전에 대한 의견을 남겨주세요
+      </div>
+      <div>
+        <button>추가</button>
+        <button>수정</button>
+        <button>삭제</button>
+      </div>
+    `);
+  } else if (type === 'firetruck') {
+    showFiretruckCommentOverlay(latitude, longitude, `
+      <div style="background:#d9edf7;border:1px solid #bce8f1;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px #aaa;">
+        🚒 이 소방차 전용구역에 대한 의견을 남겨주세요
+      </div>
+      <div>
+        <button>추가</button>
+        <button>수정</button>
+        <button>삭제</button>
+      </div>
+    `);
+  }
+
+
+  // closeclick 이벤트 리스너 등록 (X 버튼 클릭 시)
+  kakao.maps.event.addListener(infoWindow, 'closeclick', function () {
+    if (hydrantcommentOverlay) hydrantcommentOverlay.setMap(null);
+    if (firetruckcommentOverlay) firetruckcommentOverlay.setMap(null);
+      infoWindow = null;
+    });
 
   // 타입별 버튼 이벤트 연결
   setTimeout(() => {
@@ -234,6 +289,35 @@ function showInfoWindow(marker, latitude, longitude, contents = '', markerId = n
       };
     }
   }, 100);
+}
+
+function showHydrantCommentOverlay(lat, lng, contentHtml) {
+  // 기존 코멘트창 닫기
+  if (hydrantcommentOverlay) hydrantcommentOverlay.setMap(null);
+
+  // 새 코멘트창 생성
+  hydrantcommentOverlay = new kakao.maps.CustomOverlay({
+    position: new kakao.maps.LatLng(lat, lng),
+    content: contentHtml,
+    yAnchor: 0.1,  // 마커 위쪽에 위치
+    xAnchor: 0.5,
+    zIndex: 20
+  });
+  hydrantcommentOverlay.setMap(map);
+}
+
+function showFiretruckCommentOverlay(lat, lng, contentHtml) {
+
+    if(firetruckcommentOverlay) firetruckcommentOverlay.setMap(null);
+
+    firetruckcommentOverlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(lat, lng),
+        content : contentHtml,
+        yAnchor: 0.1,
+        xAnchor: 0.5,
+        zIndex : 20
+    });
+    firetruckcommentOverlay.setMap(map);
 }
 
 

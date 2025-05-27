@@ -206,12 +206,24 @@ class _MapGroupState extends State<MapGroup> {
         final lat = double.tryParse(hydrant['latitude']?.toString() ?? '');
         final lng = double.tryParse(hydrant['longitude']?.toString() ?? '');
         final address = hydrant['rdnmadr'] ?? '위치 정보 없음';
+        final lnmadr = hydrant['lnmadr'] ?? '-';
+        final descLc = hydrant['descLc'] ?? '-';
+        final prtcYn = hydrant['prtcYn'] ?? '미확인';
+        final institutionNm = hydrant['institutionNm'] ?? '-';
+        final institutionPhoneNumber = hydrant['institutionPhoneNumber'] ?? '-';
+        final referenceDate = hydrant['referenceDate'] ?? '미등록';
         if (lat != null && lng != null) {
           return {
             'latitude': lat,
             'longitude': lng,
             'address': address,
             'type': 'hydrant',
+            'lnmadr': lnmadr,
+            'descLc': descLc,
+            'prtcYn': prtcYn,
+            'institutionNm': institutionNm,
+            'institutionPhoneNumber': institutionPhoneNumber,
+            'referenceDate': referenceDate,
           };
         }
         return null;
@@ -221,12 +233,32 @@ class _MapGroupState extends State<MapGroup> {
         final lat = double.tryParse(zone['latitude']?.toString() ?? '');
         final lng = double.tryParse(zone['longitude']?.toString() ?? '');
         final address = zone['lnmadr'] ?? '위치 정보 없음';
+
+        // 각 상세 필드 추출 (null이면 기본값 대입)
+        final prkcmprt = zone['prkcmprt'] ?? '-';
+        final copertnHouseNm = zone['copertnHouseNm'] ?? '-';
+        final dongNo = zone['dongNo'] ?? '-';
+        final aphusPhoneNumber = zone['aphusPhoneNumber'] ?? '-';
+        final institutionNm = zone['institutionNm'] ?? '-';
+        final institutionPhoneNumber = zone['institutionPhoneNumber'] ?? '-';
+        final referenceDate = zone['referenceDate'] ?? '-';
+
         if (lat != null && lng != null) {
           return {
             'latitude': lat,
             'longitude': lng,
             'address': address,
             'type': 'firetruck',
+
+            // 상세 필드 추가
+            'lnmadr': address,
+            'prkcmprt': prkcmprt,
+            'copertnHouseNm': copertnHouseNm,
+            'dongNo': dongNo,
+            'aphusPhoneNumber': aphusPhoneNumber,
+            'institutionNm': institutionNm,
+            'institutionPhoneNumber': institutionPhoneNumber,
+            'referenceDate': referenceDate,
           };
         }
         return null;
