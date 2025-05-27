@@ -93,7 +93,14 @@ function addMarkersFromList(markerListJson) {
 
     kakao.maps.event.addListener(marker, 'click', function () {
       if (infoWindow) infoWindow.close();
-      showInfoWindow(marker, item.latitude, item.longitude, item.address);
+      showInfoWindow(
+        marker,
+        item.latitude,
+        item.longitude,
+        item.address || '',
+        item.id,
+        item.type
+      );
     });
 
     newMarkers.push(marker);
@@ -103,9 +110,61 @@ function addMarkersFromList(markerListJson) {
   if (clusterer) clusterer.addMarkers(newMarkers);
 }
 
+function showInfoWindow(marker, latitude, longitude, contents = '', markerId = null, type = '') {
+  // 타입별로 오버레이 내용 다르게 생성
+  let iwContent = '';
 
-function showInfoWindow(marker, latitude, longitude, contents = '') {
-  const iwContent = `<div style="padding:5px;">${contents}</div>`;
+  if (type === 'hydrant') {
+    iwContent = `
+      <div style="padding:5px;">
+        <b>소화전</b><br>${contents}
+        <div style="margin-top:8px; text-align:right;">
+          <button id="editBtn" style="margin-right:6px;">수정</button>
+          <button id="deleteBtn">삭제</button>
+        </div>
+      </div>
+    `;
+  } else if (type === 'firetruck') {
+    iwContent = `
+      <div style="padding:5px;">
+        🚒 <b>소방차 전용구역</b><br>${contents}
+        <div style="margin-top:8px; text-align:right;">
+          <button id="reportBtn">신고</button>
+        </div>
+      </div>
+    `;
+  } else if (type === 'problem') {
+    iwContent = `
+      <div style="padding:5px;">
+        <b>통행불가 위치</b><br>${contents}
+      </div>
+    `;
+  } else if (type === 'breakdown') {
+    iwContent = `
+      <div style="padding:5px;">
+        <b>고장/이상 위치</b><br>${contents}
+      </div>
+    `;
+  } else if (type === 'hydrantAdd') {
+    iwContent = `
+      <div style="padding:5px;">
+        <b>소화전 추가 요청</b><br>${contents}
+      </div>
+    `;
+  } else if (type === 'truckAdd') {
+    iwContent = `
+      <div style="padding:5px;">
+        <b>소방차구역 추가 요청</b><br>${contents}
+      </div>
+    `;
+  } else {
+    iwContent = `
+      <div style="padding:5px;">
+        ${contents}
+      </div>
+    `;
+  }
+
   const iwPosition = new kakao.maps.LatLng(latitude, longitude);
   infoWindow = new kakao.maps.InfoWindow({
     map: map,
@@ -114,7 +173,70 @@ function showInfoWindow(marker, latitude, longitude, contents = '') {
     removable: true
   });
   infoWindow.open(map, marker);
+
+  // 타입별 버튼 이벤트 연결
+  setTimeout(() => {
+    if (type === 'hydrant') {
+      const editBtn = document.getElementById('editBtn');
+      const deleteBtn = document.getElementById('deleteBtn');
+      if (editBtn) editBtn.onclick = function() {
+        infoWindow.close();
+        onEditMarker(markerId, latitude, longitude);
+      };
+      if (deleteBtn) deleteBtn.onclick = function() {
+        infoWindow.close();
+        onDeleteMarker(markerId, latitude, longitude);
+      };
+    }
+    if (type === 'firetruck') {
+      const reportBtn = document.getElementById('reportBtn');
+      if (reportBtn) reportBtn.onclick = function() {
+        infoWindow.close();
+        onReportFiretruck(markerId, latitude, longitude);
+      };
+    }
+    if (type === 'problem') {
+      const problemBtn = document.getElementById('problemBtn');
+      if (problemBtn) problemBtn.onclick = function() {
+        infoWindow.close();
+        onReportProblem(markerId, latitude, longitude);
+      };
+    }
+    if (type === 'breakdown') {
+      const breakdownBtn = document.getElementById('breakdownBtn');
+      if (breakdownBtn) breakdownBtn.onclick = function() {
+        infoWindow.close();
+        onReportBreakdown(markerId, latitude, longitude);
+      };
+    }
+    if (type === 'hydrantAdd') {
+      const approveBtn = document.getElementById('approveBtn');
+      const rejectBtn = document.getElementById('rejectBtn');
+      if (approveBtn) approveBtn.onclick = function() {
+        infoWindow.close();
+        onApproveHydrantAdd(markerId, latitude, longitude);
+      };
+      if (rejectBtn) rejectBtn.onclick = function() {
+        infoWindow.close();
+        onRejectHydrantAdd(markerId, latitude, longitude);
+      };
+    }
+    if (type === 'truckAdd') {
+      const approveBtn = document.getElementById('approveTruckBtn');
+      const rejectBtn = document.getElementById('rejectTruckBtn');
+      if (approveBtn) approveBtn.onclick = function() {
+        infoWindow.close();
+        onApproveTruckAdd(markerId, latitude, longitude);
+      };
+      if (rejectBtn) rejectBtn.onclick = function() {
+        infoWindow.close();
+        onRejectTruckAdd(markerId, latitude, longitude);
+      };
+    }
+  }, 100);
 }
+
+
 
 function setCenter(latitude, longitude) {
   map.setCenter(new kakao.maps.LatLng(latitude, longitude));
