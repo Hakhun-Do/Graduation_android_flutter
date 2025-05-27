@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const String baseUrl = "http://175.106.98.190:1040/auth"; // 실제 API URL로 변경
+  static const String baseUrl = "http://175.106.98.190:1040"; // 실제 API URL로 변경
   //http://175.106.98.190:1040/auth
 
   final FlutterSecureStorage storage = FlutterSecureStorage();
@@ -11,7 +11,7 @@ class ApiService {
   // 회원가입 요청 함수
   Future<Map<String, dynamic>> registerUser(
       String id, String password, String name, String phonenumber) async {
-    final url = Uri.parse("$baseUrl/register"); // 실제 엔드포인트로 변경
+    final url = Uri.parse("$baseUrl/auth/register"); // 실제 엔드포인트로 변경
 
     final response = await http.post(
       url,
@@ -55,7 +55,7 @@ class ApiService {
 
   // 로그인 요청 함수(JWT 토큰 저장)
   Future<Map<String, dynamic>> loginUser(String id, String password) async {
-    final url = Uri.parse("$baseUrl/login"); // 실제 엔드포인트로 변경
+    final url = Uri.parse("$baseUrl/auth/login"); // 실제 엔드포인트로 변경
 
     final response = await http.post(
       url,
@@ -116,7 +116,7 @@ class ApiService {
 
     print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
 
-    final url = Uri.parse("$baseUrl/getinfo"); // 프로필 조회 API 엔드포인트
+    final url = Uri.parse("$baseUrl/auth/getinfo"); // 프로필 조회 API 엔드포인트
 
     // ✅ 보낼 요청 정보 출력
     print("🔍 요청 URL: $url");
@@ -155,7 +155,7 @@ class ApiService {
 
     print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
 
-    final url = Uri.parse("$baseUrl/updatePassword"); // 프로필 조회 API 엔드포인트
+    final url = Uri.parse("$baseUrl/auth/updatePassword"); // 프로필 조회 API 엔드포인트
 
     // ✅ 보낼 요청 정보 출력
     print("🔍 요청 URL: $url");
@@ -198,7 +198,7 @@ class ApiService {
 
     print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
 
-    final url = Uri.parse("$baseUrl/updatePos"); // 프로필 조회 API 엔드포인트
+    final url = Uri.parse("$baseUrl/auth/updatePos"); // 프로필 조회 API 엔드포인트
 
     // ✅ 보낼 요청 정보 출력
     print("🔍 요청 URL: $url");
@@ -214,6 +214,188 @@ class ApiService {
       },
       body: jsonEncode({
         "pos": newpos,
+      }),
+    );
+
+    print("🔍 서버 응답 상태 코드: ${response.statusCode}");
+    print("🔍 서버 응답 본문: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print("✅ API 응답 데이터: $data"); // API 응답 확인
+      return data;
+    } else {
+      print("❌ API 호출 실패: 상태 코드 ${response.statusCode}, 응답 ${response.body}");
+      return null;
+    }
+  }
+
+
+
+  // DB에서 마커 정보 호출, 추가, 수정, 삭제 하는 기능 요청
+  // 마커 정보 호출(특정 좌표값 기준 요청)
+  Future<String?> pinAll(String lat, String lon) async {
+    final url = Uri.parse(
+      '$baseUrl/pin/all'
+          '?latitude=$lat'
+          '&longitude=$lon'
+    );
+
+    // ✅ 보낼 요청 정보 출력
+    print("🔍 요청 URL: $url");
+
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+      });
+
+      if (response.statusCode == 200) {
+        try {
+          final jsonBody = json.decode(response.body);
+          if (jsonBody is List && jsonBody.isNotEmpty) {
+            final firstItem = jsonBody.first;
+            final comment = firstItem['comment'];
+            print('✅ (DB) comment 값 받아옴: $comment');
+            return comment?.toString();
+          } else {
+            print('❌ 데이터 없음 또는 잘못된 형식');
+          }
+        } catch (e) {
+          print('❌ JSON 파싱 중 예외 발생: $e');
+        }
+      } else {
+        print('❌ 서버 응답 오류: ${response.statusCode}');
+        print('본문: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ 예외 발생: $e');
+    }
+
+    return null;
+  }
+
+  // 마커 정보 추가
+  Future<Map<String, dynamic>?> pinAdd(String lat, String lon, String com, String ctp, String sig, String cat) async {
+    String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
+    if (token == null) {
+      print("❌ JWT 토큰이 없습니다.");
+      return null;
+    }
+
+    print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
+
+    final url = Uri.parse("$baseUrl/pin/add"); // 프로필 조회 API 엔드포인트
+
+    // ✅ 보낼 요청 정보 출력
+    print("🔍 요청 URL: $url");
+    print("🔍 Authorization 헤더: Bearer $token");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token", // JWT 토큰 인증
+        "Content-Type": "application/json",
+        "Accept": "*/*",
+        "User-Agent": "PostmanRuntime/7.29.2", // ✅ Postman과 동일한 User-Agent 추가
+      },
+      body: jsonEncode({
+        "lat": lat,
+        "lon" : lon,
+        "com" : com,
+        "ctp" : ctp,
+        "sig" : sig,
+        "cat" : cat,
+      }),
+    );
+
+    print("🔍 서버 응답 상태 코드: ${response.statusCode}");
+    print("🔍 서버 응답 본문: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print("✅ API 응답 데이터: $data"); // API 응답 확인
+      return data;
+    } else {
+      print("❌ API 호출 실패: 상태 코드 ${response.statusCode}, 응답 ${response.body}");
+      return null;
+    }
+  }
+
+  // 마커 정보 수정
+  Future<Map<String, dynamic>?> pinMod(String lat, String lon, String com, String ctp, String sig, String cat) async {
+    String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
+    if (token == null) {
+      print("❌ JWT 토큰이 없습니다.");
+      return null;
+    }
+
+    print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
+
+    final url = Uri.parse("$baseUrl/pin/mod"); // 프로필 조회 API 엔드포인트
+
+    // ✅ 보낼 요청 정보 출력
+    print("🔍 요청 URL: $url");
+    print("🔍 Authorization 헤더: Bearer $token");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token", // JWT 토큰 인증
+        "Content-Type": "application/json",
+        "Accept": "*/*",
+        "User-Agent": "PostmanRuntime/7.29.2", // ✅ Postman과 동일한 User-Agent 추가
+      },
+      body: jsonEncode({
+        "lat": lat,
+        "lon" : lon,
+        "com" : com,
+        "ctp" : ctp,
+        "sig" : sig,
+        "cat" : cat,
+      }),
+    );
+
+    print("🔍 서버 응답 상태 코드: ${response.statusCode}");
+    print("🔍 서버 응답 본문: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print("✅ API 응답 데이터: $data"); // API 응답 확인
+      return data;
+    } else {
+      print("❌ API 호출 실패: 상태 코드 ${response.statusCode}, 응답 ${response.body}");
+      return null;
+    }
+  }
+
+  // 마커 정보 삭제
+  Future<Map<String, dynamic>?> pinDel(String lat, String lon) async {
+    String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
+    if (token == null) {
+      print("❌ JWT 토큰이 없습니다.");
+      return null;
+    }
+
+    print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
+
+    final url = Uri.parse("$baseUrl/pin/del"); // 프로필 조회 API 엔드포인트
+
+    // ✅ 보낼 요청 정보 출력
+    print("🔍 요청 URL: $url");
+    print("🔍 Authorization 헤더: Bearer $token");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token", // JWT 토큰 인증
+        "Content-Type": "application/json",
+        "Accept": "*/*",
+        "User-Agent": "PostmanRuntime/7.29.2", // ✅ Postman과 동일한 User-Agent 추가
+      },
+      body: jsonEncode({
+        "lat": lat,
+        "lon" : lon,
       }),
     );
 
