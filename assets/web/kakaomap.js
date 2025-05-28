@@ -406,6 +406,20 @@ window.onload = function () {
     };
     map = new kakao.maps.Map(container, options);
 
+    kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+      const latlng = mouseEvent.latLng;
+      const data = {
+        latitude: latlng.getLat(),
+        longitude: latlng.getLng()
+      };
+      console.log("🖱 클릭 좌표:", data);
+
+      // Flutter로 데이터 전달
+      if (window.flutterClickMarker) {
+        window.flutterClickMarker.postMessage(JSON.stringify(data));
+      }
+    });
+
     ps = new kakao.maps.services.Places();
     infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });
 

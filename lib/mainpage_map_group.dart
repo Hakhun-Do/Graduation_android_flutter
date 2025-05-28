@@ -66,6 +66,97 @@ class _MapGroupState extends State<MapGroup> {
         },
       )
       ..addJavaScriptChannel(
+        'flutterClickMarker',
+        onMessageReceived: (JavaScriptMessage message) async {
+          final data = jsonDecode(message.message);
+          final lat = data['latitude'];
+          final lng = data['longitude'];
+
+          final add = await showDialog<bool>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: Text('이 위치에 마커를 추가하시겠습니까?'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
+                TextButton(onPressed: () => Navigator.pop(context, true), child: Text('추가')),
+              ],
+            ),
+          );
+
+          if (add != true) return;
+
+          // 입력 받기 (카테고리 + 코멘트)
+          String? category;
+          String comment = '';
+          await showDialog(
+            context: context,
+            builder: (context) {
+              final commentController = TextEditingController();
+              return AlertDialog(
+                title: Text('마커 정보 입력'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(labelText: '카테고리'),
+                      items: [
+                        DropdownMenuItem(value: '소방용수시설추가', child: Text('소방용수시설추가')),
+                        DropdownMenuItem(value: '소방차전용구역추가', child: Text('소방차전용구역추가')),
+                        DropdownMenuItem(value: '통행불가', child: Text('통행불가')),
+                      ],
+                      onChanged: (val) => category = val,
+                    ),
+                    TextField(
+                      controller: commentController,
+                      decoration: InputDecoration(labelText: '코멘트'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: Text('취소')),
+                  ElevatedButton(
+                    onPressed: () {
+                      comment = commentController.text;
+                      Navigator.pop(context);
+                    },
+                    child: Text('저장'),
+                  ),
+                ],
+              );
+            },
+          );
+
+          if (category == null || comment.isEmpty) return;
+
+          // 주소 변환
+          final addressInfo = await getFullAddressFromLatLng(lat, lng);
+          final ctp = addressInfo['city'] ?? '';
+          final sig = addressInfo['town'] ?? '';
+          final adr = addressInfo['address'] ?? '';
+
+          // DB 저장
+          final result = await ApiService().pinAdd(
+            lat.toString(),
+            lng.toString(),
+            comment,
+            ctp,
+            sig,
+            category!,
+            adr,
+          );
+
+          if (result != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 추가되었습니다")));
+
+            final js = '''
+        addMarker(null, JSON.stringify({latitude: $lat, longitude: $lng}), null, 24, 30, 0, 0, "$comment");
+      ''';
+            await _kakaoMapController?.evalJavascript(js);
+          }
+        },
+      )
+
+      ..addJavaScriptChannel(
         'searchResultBridge',
         onMessageReceived: (JavaScriptMessage message) {
           final data = jsonDecode(message.message);
@@ -369,6 +460,51 @@ class _MapGroupState extends State<MapGroup> {
       return Future.error('Location permissions are permanently denied.');
     }
     return await Geolocator.getCurrentPosition();
+  }
+
+  Future<Map<String, String>> getFullAddressFromLatLng(double lat, double lng) async {
+    const String kakaoApiKey = '206075c96a586adaec930981a17a3668';
+
+    final coordToRegion = Uri.parse(
+        'https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
+    final coordToAddress = Uri.parse(
+        'https://dapi.kakao.com/v2/local/geo/coord2address.json?x=$lng&y=$lat');
+
+    final regionRes = await http.get(
+      coordToRegion,
+      headers: {
+        'Authorization': 'KakaoAK $kakaoApiKey',
+        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp',
+      },
+    );
+
+    final addressRes = await http.get(
+      coordToAddress,
+      headers: {
+        'Authorization': 'KakaoAK $kakaoApiKey',
+        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp',
+      },
+    );
+
+    if (regionRes.statusCode == 200 && addressRes.statusCode == 200) {
+      final regionData = jsonDecode(regionRes.body)['documents'][0];
+      final addressData = jsonDecode(addressRes.body)['documents'][0]['address'];
+
+      final city = regionData['region_1depth_name'];
+      final town = regionData['region_2depth_name'];
+      final address = addressData['address_name'];
+
+      print("✅ 좌표 주소 변환 결과: city=$city, town=$town, address=$address");
+
+      return {
+        'city': city,
+        'town': town,
+        'address': address,
+      };
+    } else {
+      throw Exception(
+          '주소 변환 실패\nregion: ${regionRes.body}\naddress: ${addressRes.body}');
+    }
   }
 
   Widget _buildDropdowns() {
