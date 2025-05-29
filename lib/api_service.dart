@@ -276,7 +276,7 @@ class ApiService {
   }
 
   // 마커 정보 추가
-  Future<Map<String, dynamic>?> pinAdd(String lat, String lon, String com, String ctp, String sig, String cat, String adr) async {
+  Future<Map<String, dynamic>?> pinAdd(String lat, String lon, String com, String ctp, String sig, String cat, String addr) async {
     String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
     if (token == null) {
       print("❌ JWT 토큰이 없습니다.");
@@ -306,7 +306,7 @@ class ApiService {
         "ctp" : ctp, // 시도명
         "sig" : sig, // 시군구명
         "cat" : cat, // 카테고리
-        "adr" : adr, // 지번주소
+        "addr" : addr, // 지번주소
       }),
     );
 
@@ -324,7 +324,7 @@ class ApiService {
   }
 
   // 마커 정보 수정
-  Future<Map<String, dynamic>?> pinMod(String lat, String lon, String com, String ctp, String sig, String cat, String adr) async {
+  Future<Map<String, dynamic>?> pinMod(String lat, String lon, String com, String cat) async {
     String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
     if (token == null) {
       print("❌ JWT 토큰이 없습니다.");
@@ -351,10 +351,7 @@ class ApiService {
         "lat": lat, // 위도
         "lon" : lon, // 경도
         "com" : com, // 코멘트
-        "ctp" : ctp, // 시도명
-        "sig" : sig, // 시군구명
         "cat" : cat, // 카테고리
-        "adr" : adr, // 지번주소
       }),
     );
 
@@ -396,8 +393,8 @@ class ApiService {
         "User-Agent": "PostmanRuntime/7.29.2", // ✅ Postman과 동일한 User-Agent 추가
       },
       body: jsonEncode({
-        "lat": lat,
-        "lon" : lon,
+        "lat": lat, // 위도
+        "lon" : lon, // 경도
       }),
     );
 
