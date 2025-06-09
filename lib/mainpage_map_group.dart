@@ -572,7 +572,7 @@ class _MapGroupState extends State<MapGroup> {
         return null;
       }).whereType<Map<String, dynamic>>().toList();
 
-      final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...breakdownMarkers, ...hydrantAddMarkers, ...truckAddMarkers,];
+      final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...hydrantAddMarkers, ...truckAddMarkers, ...breakdownMarkers,];
 
       final js = '''
                     addMarkersFromList(${jsonEncode(allMarkers)});
@@ -916,7 +916,7 @@ class _MapGroupState extends State<MapGroup> {
                     return null;
                   }).whereType<Map<String, dynamic>>().toList();
 
-                  final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...breakdownMarkers, ...hydrantAddMarkers, ...truckAddMarkers,];
+                  final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...hydrantAddMarkers, ...truckAddMarkers, ...breakdownMarkers,];
 
                   final js = '''
                     addMarkersFromList(${jsonEncode(allMarkers)});
