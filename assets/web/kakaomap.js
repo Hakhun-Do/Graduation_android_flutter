@@ -104,6 +104,17 @@ function addMarkersFromList(markerListJson) {
         item.id,
         item.type
       );
+
+      // ✅ Dart에 마커 좌표 전송
+        const message = JSON.stringify({
+          latitude: item.latitude,
+          longitude: item.longitude,
+        });
+
+        // ✅ WebView에서 정의한 채널 이름과 동일하게!
+        if (window.flutterClickMarkerFromMap) {
+          window.flutterClickMarkerFromMap.postMessage(message);
+        }
     });
 
     newMarkers.push(marker);
@@ -196,7 +207,7 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
   });
   infoWindow.open(map, marker);
 
-  // 코멘트창 띄우기
+  /*// 코멘트창 띄우기
   if (type === 'hydrant') {
     showHydrantCommentOverlay(latitude, longitude, `
       <div style="background:#fff3cd;border:1px solid #ffeeba;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px #aaa;">
@@ -219,7 +230,7 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
         <button>삭제</button>
       </div>
     `);
-  }
+  }*/
 
 
   // closeclick 이벤트 리스너 등록 (X 버튼 클릭 시)

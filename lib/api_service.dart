@@ -133,14 +133,16 @@ class ApiService {
     );
 
     print("🔍 서버 응답 상태 코드: ${response.statusCode}");
-    print("🔍 서버 응답 본문: ${response.body}");
+    // ✅ 한글 깨짐 방지를 위해 bodyBytes 사용
+    final decoded = utf8.decode(response.bodyBytes);
+    print("🔍 디코딩된 본문: $decoded");
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(decoded);
       print("✅ API 응답 데이터: $data"); // API 응답 확인
       return data;
     } else {
-      print("❌ API 호출 실패: 상태 코드 ${response.statusCode}, 응답 ${response.body}");
+      print("❌ API 호출 실패: 상태 코드 ${response.statusCode}, 응답 $decoded");
       return null;
     }
   }
@@ -252,7 +254,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         try {
-          final jsonBody = json.decode(response.body);
+          final decodedBody = utf8.decode(response.bodyBytes);
+          final jsonBody = json.decode(decodedBody);
           if (jsonBody is List && jsonBody.isNotEmpty) {
             final firstItem = jsonBody.first;
             final comment = firstItem['comment'];
@@ -276,7 +279,7 @@ class ApiService {
   }
 
   // 마커 정보 추가
-  Future<Map<String, dynamic>?> pinAdd(String lat, String lon, String com, String ctp, String sig, String cat, String addr) async {
+  Future<List<dynamic>?> pinAdd(String lat, String lon, String com, String ctp, String sig, String cat, String addr) async {
     String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
     if (token == null) {
       print("❌ JWT 토큰이 없습니다.");
@@ -324,7 +327,7 @@ class ApiService {
   }
 
   // 마커 정보 수정
-  Future<Map<String, dynamic>?> pinMod(String lat, String lon, String com, String cat) async {
+  Future<List<dynamic>?> pinMod(String lat, String lon, String com, String cat) async {
     String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
     if (token == null) {
       print("❌ JWT 토큰이 없습니다.");
@@ -369,11 +372,11 @@ class ApiService {
   }
 
   // 마커 정보 삭제
-  Future<Map<String, dynamic>?> pinDel(String lat, String lon) async {
+  Future<bool> pinDel(String lat, String lon) async {
     String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
     if (token == null) {
       print("❌ JWT 토큰이 없습니다.");
-      return null;
+      return false;
     }
 
     print("🔑 저장된 JWT 토큰: $token"); // 토큰 값 출력 (디버깅용)
@@ -402,12 +405,11 @@ class ApiService {
     print("🔍 서버 응답 본문: ${response.body}");
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print("✅ API 응답 데이터: $data"); // API 응답 확인
-      return data;
+      print("✅ 삭제 성공: ${response.body}");
+      return true;
     } else {
-      print("❌ API 호출 실패: 상태 코드 ${response.statusCode}, 응답 ${response.body}");
-      return null;
+      print("❌ 삭제 실패: ${response.body}");
+      return false;
     }
   }
 }
@@ -439,7 +441,8 @@ class ProblemMarkerService { // 서버 DB에서 통행불가 마커 요청
 
       if (response.statusCode == 200) {
         try {
-          final jsonBody = json.decode(response.body);
+          final decodedBody = utf8.decode(response.bodyBytes);
+          final jsonBody = json.decode(decodedBody);
           if (jsonBody is List) {
             allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
           } else {
@@ -488,7 +491,8 @@ class BreakdownMarkerService { // 서버 DB에서 이상 마커 요청
 
       if (response.statusCode == 200) {
         try {
-          final jsonBody = json.decode(response.body);
+          final decodedBody = utf8.decode(response.bodyBytes);
+          final jsonBody = json.decode(decodedBody);
           if (jsonBody is List) {
             allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
           } else {
@@ -537,7 +541,8 @@ class HydrantAddMarkerService { // 서버 DB에서 소방용수시설 추가 마
 
       if (response.statusCode == 200) {
         try {
-          final jsonBody = json.decode(response.body);
+          final decodedBody = utf8.decode(response.bodyBytes);
+          final jsonBody = json.decode(decodedBody);
           if (jsonBody is List) {
             allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
           } else {
@@ -586,7 +591,8 @@ class TruckAddMarkerService { // 서버 DB에서 소방차전용구역 추가 �
 
       if (response.statusCode == 200) {
         try {
-          final jsonBody = json.decode(response.body);
+          final decodedBody = utf8.decode(response.bodyBytes);
+          final jsonBody = json.decode(decodedBody);
           if (jsonBody is List) {
             allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
           } else {

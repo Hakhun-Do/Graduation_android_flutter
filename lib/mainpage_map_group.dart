@@ -157,6 +157,163 @@ class _MapGroupState extends State<MapGroup> {
       )
 
       ..addJavaScriptChannel(
+        'flutterClickMarkerFromMap',
+        onMessageReceived: (JavaScriptMessage message) async {
+          final data = jsonDecode(message.message);
+          final lat = data['latitude'];
+          final lng = data['longitude'];
+
+          final commentController = TextEditingController();
+
+          final addressInfo = await getFullAddressFromLatLng(lat, lng);
+          final ctp = addressInfo['city'] ?? '';
+          final sig = addressInfo['town'] ?? '';
+          final adr = addressInfo['address'] ?? '';
+
+          final com = await ApiService().pinAll(lat.toString(), lng.toString());
+          String comment = '';
+
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return StatefulBuilder(
+                builder: (context, setState) {
+                  return Dialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Stack(
+                        children: [
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 10),
+                              Text('코멘트', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 10),
+                              Text(
+                                '코멘트 : $com',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: commentController,
+                                decoration: InputDecoration(labelText: '코멘트'),
+                              ),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 3,
+                                children: [
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 내부 여백 줄이기
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
+                                      minimumSize: Size(0, 32), // 버튼 높이 최소화
+                                    ),
+                                    onPressed: () async {
+                                      // TODO: 추가 로직
+                                      comment = commentController.text;
+                                      final result1 = await ApiService().pinAdd(
+                                        lat.toString(),
+                                        lng.toString(),
+                                        comment,
+                                        ctp,
+                                        sig,
+                                        '코멘트',
+                                        adr,
+                                      );
+                                      if (result1 != null) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 추가되었습니다")));}
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('추가'),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 내부 여백 줄이기
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
+                                      minimumSize: Size(0, 32), // 버튼 높이 최소화
+                                    ),
+                                    onPressed: () async {
+                                      // TODO: 수정 로직
+                                      comment = commentController.text;
+                                      final result2 = await ApiService().pinMod(
+                                        lat.toString(),
+                                        lng.toString(),
+                                        comment,
+                                        '코멘트',
+                                      );
+                                      if (result2 != null) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 수정되었습니다")));}
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('수정'),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 내부 여백 줄이기
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
+                                      minimumSize: Size(0, 32), // 버튼 높이 최소화
+                                    ),
+                                    onPressed: () async {
+                                      // TODO: 삭제 로직
+                                      comment = commentController.text;
+                                      final result3 = await ApiService().pinDel(
+                                        lat.toString(),
+                                        lng.toString(),
+                                      );
+                                      if (result3) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 삭제되었습니다")));}
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('삭제'),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // 내부 여백 줄이기
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
+                                      minimumSize: Size(0, 32), // 버튼 높이 최소화
+                                    ),
+                                    onPressed: () async {
+                                      // TODO: 신고 로직
+                                      comment = commentController.text;
+                                      final result4 = await ApiService().pinAdd(
+                                        lat.toString(),
+                                        lng.toString(),
+                                        comment,
+                                        ctp,
+                                        sig,
+                                        '이상',
+                                        adr,
+                                      );
+                                      if (result4 != null) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 신고되었습니다")));}
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text('신고'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: IconButton(
+                              icon: Icon(Icons.close),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      )
+
+      ..addJavaScriptChannel(
         'searchResultBridge',
         onMessageReceived: (JavaScriptMessage message) {
           final data = jsonDecode(message.message);
