@@ -197,7 +197,7 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
   } else if (type === 'hydrantAdd') {
      iwContent = `
         <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
-         <b style="font-size:16px; color:#2c3e50;">🧯 소화전 추가 요청</b>
+         <b style="font-size:16px; color:#2c3e50;">🧯 소화전 추가</b>
          <hr style="margin:6px 0; border-color:#eee;">
          <div style="font-size:10px; line-height:1.5;">
             <div style="font-size:10px; padding:5px;">
@@ -211,7 +211,7 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
   } else if (type === 'truckAdd') {
      iwContent = `
        <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
-           <b style="font-size:16px; color:#2c3e50;">🚒 소방차구역 추가 요청</b>
+           <b style="font-size:16px; color:#2c3e50;">🚒 소방차구역 추가</b>
            <hr style="margin:6px 0; border-color:#eee;">
            <div style="font-size:10px; line-height:1.5;">
               <div style="font-size:10px; padding:5px;">
