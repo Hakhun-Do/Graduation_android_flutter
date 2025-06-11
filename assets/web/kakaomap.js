@@ -136,8 +136,8 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
       <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
         <b style="font-size:16px; color:#2c3e50;">소화전 상세정보</b>
         <hr style="margin:6px 0; border-color:#eee;">
-        <div style="font-size:14px; line-height:1.5;">
-          <b>📍 소재지지번주소:</b> ${item.lnmadr || '-'}<br>
+        <div style="font-size:10px; line-height:1.5;">
+          <b>📍 주소:</b> ${item.lnmadr || '-'}<br>
           <b>📌 상세위치:</b> ${item.descLc || '-'}<br>
           <b>🛡️ 보호틀유무:</b> ${item.prtcYn === 'Y' ? '있음' : (item.prtcYn === 'N' ? '없음' : '-')}<br>
           <b>🏢 관할기관명:</b> ${item.institutionNm || '-'}<br>
@@ -151,8 +151,8 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
        <div style="padding:5px;">
          🚒 <b>소방차 전용구역</b>
          <hr style="margin:4px 0;">
-          <div style="font-size:14px; line-height:1.5;">
-            <b>📍 소재지지번주소:</b> ${item.lnmadr || '-'}<br>
+          <div style="font-size:10px; line-height:1.5;">
+            <b>📍 주소:</b> ${item.lnmadr || '-'}<br>
             <b>🅿️ 전용주차구획:</b> ${item.prkcmprt || '-'}개<br>
             <b>🏢 공동주택명:</b> ${item.copertnHouseNm || '-'}<br>
             <b>🔢 동번호:</b> ${item.dongNo || '-'}<br>
@@ -166,30 +166,62 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
           </div>
         </div>
       `;
-    } else if (type === 'problem') {
-    iwContent = `
-      <div style="padding:5px;">
-        <b>통행불가 위치</b><br>${contents}
-      </div>
-    `;
+  } else if (type === 'problem') {
+     iwContent = `
+       <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
+         <b style="font-size:16px; color:#2c3e50;">🚧 통행불가 위치</b>
+         <hr style="margin:6px 0; border-color:#eee;">
+         <div style="font-size:10px; line-height:1.5;">
+            <div style="font-size:10px; padding:5px;">
+              <b>📍 주소:</b> ${item.address || '-'}<br>
+              <b>📂 카테고리:</b> ${item.category || '-'}<br>
+              <b>📅 데이터 기준일자:</b> ${item.date || '-'}
+            </div>
+         </div>
+       </div>
+     `;
   } else if (type === 'breakdown') {
-    iwContent = `
-      <div style="padding:5px;">
-        <b>고장/이상 위치</b><br>${contents}
-      </div>
-    `;
+     iwContent = `
+        <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
+           <b style="font-size:16px; color:#2c3e50;">⚠️ 고장/이상 위치</b>
+           <hr style="margin:6px 0; border-color:#eee;">
+           <div style="font-size:10px; line-height:1.5;">
+              <div style="font-size:10px; padding:5px;">
+                <b>📍 주소:</b> ${item.address || '-'}<br>
+                <b>📂 카테고리:</b> ${item.category || '-'}<br>
+                <b>📅 데이터 기준일자:</b> ${item.date || '-'}
+              </div>
+           </div>
+         </div>
+     `;
   } else if (type === 'hydrantAdd') {
-    iwContent = `
-      <div style="padding:5px;">
-        <b>소화전 추가 요청</b><br>${contents}
-      </div>
-    `;
+     iwContent = `
+        <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
+         <b style="font-size:16px; color:#2c3e50;">🧯 소화전 추가 요청</b>
+         <hr style="margin:6px 0; border-color:#eee;">
+         <div style="font-size:10px; line-height:1.5;">
+            <div style="font-size:10px; padding:5px;">
+              <b>📍 주소:</b> ${item.address || '-'}<br>
+              <b>📂 카테고리:</b> ${item.category || '-'}<br>
+              <b>📅 데이터 기준일자:</b> ${item.date || '-'}
+            </div>
+         </div>
+       </div>
+     `;
   } else if (type === 'truckAdd') {
-    iwContent = `
-      <div style="padding:5px;">
-        <b>소방차구역 추가 요청</b><br>${contents}
-      </div>
-    `;
+     iwContent = `
+       <div style="padding:8px; min-width:220px; font-family: Arial, sans-serif;">
+           <b style="font-size:16px; color:#2c3e50;">🚒 소방차구역 추가 요청</b>
+           <hr style="margin:6px 0; border-color:#eee;">
+           <div style="font-size:10px; line-height:1.5;">
+              <div style="font-size:10px; padding:5px;">
+                <b>📍 주소:</b> ${item.address || '-'}<br>
+                <b>📂 카테고리:</b> ${item.category || '-'}<br>
+                <b>📅 데이터 기준일자:</b> ${item.date || '-'}
+              </div>
+           </div>
+         </div>
+     `;
   } else {
     iwContent = `
       <div style="padding:5px;">
@@ -206,100 +238,6 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
     removable: true
   });
   infoWindow.open(map, marker);
-
-  /*// 코멘트창 띄우기
-  if (type === 'hydrant') {
-    showHydrantCommentOverlay(latitude, longitude, `
-      <div style="background:#fff3cd;border:1px solid #ffeeba;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px #aaa;">
-        💬 이 소화전에 대한 의견을 남겨주세요
-      </div>
-      <div>
-        <button>추가</button>
-        <button>수정</button>
-        <button>삭제</button>
-      </div>
-    `);
-  } else if (type === 'firetruck') {
-    showFiretruckCommentOverlay(latitude, longitude, `
-      <div style="background:#d9edf7;border:1px solid #bce8f1;padding:10px 18px;border-radius:8px;font-size:15px;box-shadow:0 2px 8px #aaa;">
-        🚒 이 소방차 전용구역에 대한 의견을 남겨주세요
-      </div>
-      <div>
-        <button>추가</button>
-        <button>수정</button>
-        <button>삭제</button>
-      </div>
-    `);
-  }*/
-
-
-  // closeclick 이벤트 리스너 등록 (X 버튼 클릭 시)
-  kakao.maps.event.addListener(infoWindow, 'closeclick', function () {
-    if (hydrantcommentOverlay) hydrantcommentOverlay.setMap(null);
-    if (firetruckcommentOverlay) firetruckcommentOverlay.setMap(null);
-      infoWindow = null;
-    });
-
-  // 타입별 버튼 이벤트 연결
-  setTimeout(() => {
-    if (type === 'hydrant') {
-      const editBtn = document.getElementById('editBtn');
-      const deleteBtn = document.getElementById('deleteBtn');
-      if (editBtn) editBtn.onclick = function() {
-        infoWindow.close();
-        onEditMarker(markerId, latitude, longitude);
-      };
-      if (deleteBtn) deleteBtn.onclick = function() {
-        infoWindow.close();
-        onDeleteMarker(markerId, latitude, longitude);
-      };
-    }
-    if (type === 'firetruck') {
-      const reportBtn = document.getElementById('reportBtn');
-      if (reportBtn) reportBtn.onclick = function() {
-        infoWindow.close();
-        onReportFiretruck(markerId, latitude, longitude);
-      };
-    }
-    if (type === 'problem') {
-      const problemBtn = document.getElementById('problemBtn');
-      if (problemBtn) problemBtn.onclick = function() {
-        infoWindow.close();
-        onReportProblem(markerId, latitude, longitude);
-      };
-    }
-    if (type === 'breakdown') {
-      const breakdownBtn = document.getElementById('breakdownBtn');
-      if (breakdownBtn) breakdownBtn.onclick = function() {
-        infoWindow.close();
-        onReportBreakdown(markerId, latitude, longitude);
-      };
-    }
-    if (type === 'hydrantAdd') {
-      const approveBtn = document.getElementById('approveBtn');
-      const rejectBtn = document.getElementById('rejectBtn');
-      if (approveBtn) approveBtn.onclick = function() {
-        infoWindow.close();
-        onApproveHydrantAdd(markerId, latitude, longitude);
-      };
-      if (rejectBtn) rejectBtn.onclick = function() {
-        infoWindow.close();
-        onRejectHydrantAdd(markerId, latitude, longitude);
-      };
-    }
-    if (type === 'truckAdd') {
-      const approveBtn = document.getElementById('approveTruckBtn');
-      const rejectBtn = document.getElementById('rejectTruckBtn');
-      if (approveBtn) approveBtn.onclick = function() {
-        infoWindow.close();
-        onApproveTruckAdd(markerId, latitude, longitude);
-      };
-      if (rejectBtn) rejectBtn.onclick = function() {
-        infoWindow.close();
-        onRejectTruckAdd(markerId, latitude, longitude);
-      };
-    }
-  }, 100);
 }
 
 function showHydrantCommentOverlay(lat, lng, contentHtml) {

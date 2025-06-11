@@ -515,12 +515,16 @@ class _MapGroupState extends State<MapGroup> {
       final problemMarkers = problemData.map((zone) {
         final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
         final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        final address = zone['addr'] ?? '-';
+        final category = zone['cat'] ?? '-';
+        final date = zone['date'] ?? '-';
         if (lat != null && lng != null) {
           return {
             'latitude': lat,
             'longitude': lng,
-            //'address': address,
+            'address': address,
+            'category': category,
+            'date': date,
             'type': 'problem',
           };
         }
@@ -530,13 +534,17 @@ class _MapGroupState extends State<MapGroup> {
       final breakdownMarkers = breakdownData.map((zone) {
         final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
         final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        final address = zone['addr'] ?? '-';
+        final category = zone['cat'] ?? '-';
+        final date = zone['date'] ?? '-';
         if (lat != null && lng != null) {
           return {
             'latitude': lat,
             'longitude': lng,
-            //'address': address,
-            'type': 'breakdown',
+            'address': address,
+            'category': category,
+            'date': date,
+            'type': 'problem',
           };
         }
         return null;
@@ -545,13 +553,17 @@ class _MapGroupState extends State<MapGroup> {
       final hydrantAddMarkers = hydrantAddData.map((zone) {
         final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
         final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        final address = zone['addr'] ?? '-';
+        final category = zone['cat'] ?? '-';
+        final date = zone['date'] ?? '-';
         if (lat != null && lng != null) {
           return {
             'latitude': lat,
             'longitude': lng,
-            //'address': address,
-            'type': 'hydrantAdd',
+            'address': address,
+            'category': category,
+            'date': date,
+            'type': 'problem',
           };
         }
         return null;
@@ -560,13 +572,17 @@ class _MapGroupState extends State<MapGroup> {
       final truckAddMarkers = truckAddData.map((zone) {
         final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
         final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-        //final address = zone['lnmadr'] ?? '위치 정보 없음';
+        final address = zone['addr'] ?? '-';
+        final category = zone['cat'] ?? '-';
+        final date = zone['date'] ?? '-';
         if (lat != null && lng != null) {
           return {
             'latitude': lat,
             'longitude': lng,
-            //'address': address,
-            'type': 'truckAdd',
+            'address': address,
+            'category': category,
+            'date': date,
+            'type': 'problem',
           };
         }
         return null;
@@ -859,12 +875,16 @@ class _MapGroupState extends State<MapGroup> {
                   final problemMarkers = problemData.map((zone) {
                     final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
                     final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    final address = zone['addr'] ?? '-';
+                    final category = zone['cat'] ?? '-';
+                    final date = zone['date'] ?? '-';
                     if (lat != null && lng != null) {
                       return {
                         'latitude': lat,
                         'longitude': lng,
-                        //'address': address,
+                        'address': address,
+                        'category': category,
+                        'date': date,
                         'type': 'problem',
                       };
                     }
@@ -874,13 +894,17 @@ class _MapGroupState extends State<MapGroup> {
                   final breakdownMarkers = breakdownData.map((zone) {
                     final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
                     final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    final address = zone['addr'] ?? '-';
+                    final category = zone['cat'] ?? '-';
+                    final date = zone['date'] ?? '-';
                     if (lat != null && lng != null) {
                       return {
                         'latitude': lat,
                         'longitude': lng,
-                        //'address': address,
-                        'type': 'breakdown',
+                        'address': address,
+                        'category': category,
+                        'date': date,
+                        'type': 'problem',
                       };
                     }
                     return null;
@@ -889,13 +913,17 @@ class _MapGroupState extends State<MapGroup> {
                   final hydrantAddMarkers = hydrantAddData.map((zone) {
                     final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
                     final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    final address = zone['addr'] ?? '-';
+                    final category = zone['cat'] ?? '-';
+                    final date = zone['date'] ?? '-';
                     if (lat != null && lng != null) {
                       return {
                         'latitude': lat,
                         'longitude': lng,
-                        //'address': address,
-                        'type': 'hydrantAdd',
+                        'address': address,
+                        'category': category,
+                        'date': date,
+                        'type': 'problem',
                       };
                     }
                     return null;
@@ -904,13 +932,17 @@ class _MapGroupState extends State<MapGroup> {
                   final truckAddMarkers = truckAddData.map((zone) {
                     final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
                     final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    //final address = zone['lnmadr'] ?? '위치 정보 없음';
+                    final address = zone['addr'] ?? '-';
+                    final category = zone['cat'] ?? '-';
+                    final date = zone['date'] ?? '-';
                     if (lat != null && lng != null) {
                       return {
                         'latitude': lat,
                         'longitude': lng,
-                        //'address': address,
-                        'type': 'truckAdd',
+                        'address': address,
+                        'category': category,
+                        'date': date,
+                        'type': 'problem',
                       };
                     }
                     return null;
