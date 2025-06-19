@@ -104,17 +104,18 @@ function addMarkersFromList(markerListJson) {
         item.id,
         item.type
       );
-
+      /*
       // ✅ Dart에 마커 좌표 전송
-        const message = JSON.stringify({
-          latitude: item.latitude,
-          longitude: item.longitude,
-        });
+      const message = JSON.stringify({
+        latitude: item.latitude,
+        longitude: item.longitude,
+      });
 
-        // ✅ WebView에서 정의한 채널 이름과 동일하게!
-        if (window.flutterClickMarkerFromMap) {
-          window.flutterClickMarkerFromMap.postMessage(message);
-        }
+      // ✅ WebView에서 정의한 채널 이름과 동일하게!
+      if (window.flutterClickMarkerFromMap) {
+        window.flutterClickMarkerFromMap.postMessage(message);
+      }
+      */
     });
 
     newMarkers.push(marker);
@@ -144,6 +145,9 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
           <b>📞 전화번호:</b> ${item.institutionPhoneNumber || '-'}<br>
           <b>📅 데이터기준일자:</b> ${item.referenceDate || '-'}
         </div>
+        <div style="text-align: right; margin-top: 8px;">
+          <button id="commentBtn" style="font-size:10px;">💬 코멘트</button>
+        </div>
       </div>
     `;
   } else if (type === 'firetruck') {
@@ -161,8 +165,8 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
             <b>☎️ 소방서 전화:</b> ${item.institutionPhoneNumber || '-'}<br>
             <b>📅 데이터 기준일:</b> ${item.referenceDate || '-'}
           </div>
-          <div style="margin-top:8px; text-align:right;">
-            <button id="reportBtn">신고</button>
+          <div style="margin-top:4px; text-align:right;">
+            <button id="commentBtn" style="font-size:10px;">💬 코멘트</button>
           </div>
         </div>
       `;
@@ -178,6 +182,9 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
               <b>📅 데이터 기준일자:</b> ${item.date || '-'}
             </div>
          </div>
+         <div style="text-align: right; margin-top: 8px;">
+           <button id="commentBtn" style="font-size:10px;">💬 코멘트</button>
+         </div>
        </div>
      `;
   } else if (type === 'breakdown') {
@@ -191,6 +198,9 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
                 <b>📂 카테고리:</b> ${item.category || '-'}<br>
                 <b>📅 데이터 기준일자:</b> ${item.date || '-'}
               </div>
+           </div>
+           <div style="text-align: right; margin-top: 8px;">
+             <button id="commentBtn" style="font-size:10px;">💬 코멘트</button>
            </div>
          </div>
      `;
@@ -206,6 +216,9 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
               <b>📅 데이터 기준일자:</b> ${item.date || '-'}
             </div>
          </div>
+         <div style="text-align: right; margin-top: 8px;">
+           <button id="commentBtn" style="font-size:10px;">💬 코멘트</button>
+         </div>
        </div>
      `;
   } else if (type === 'truckAdd') {
@@ -219,6 +232,9 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
                 <b>📂 카테고리:</b> ${item.category || '-'}<br>
                 <b>📅 데이터 기준일자:</b> ${item.date || '-'}
               </div>
+           </div>
+           <div style="text-align: right; margin-top: 8px;">
+             <button id="commentBtn" style="font-size:10px;">💬 코멘트</button>
            </div>
          </div>
      `;
@@ -238,6 +254,46 @@ function showInfoWindow(marker, latitude, longitude, item = {}, markerId = null,
     removable: true
   });
   infoWindow.open(map, marker);
+
+  // 이 방식으로는 플러터 통신 성공
+  setTimeout(() => {
+    const commentBtn = document.getElementById('commentBtn');
+    if (commentBtn) {
+      commentBtn.addEventListener('click', () => {
+        const message = JSON.stringify({
+                  latitude: latitude,
+                  longitude: longitude,
+                });
+
+                // ✅ WebView에서 정의한 채널 이름과 동일하게!
+                if (window.flutterClickMarkerFromMap) {
+                  window.flutterClickMarkerFromMap.postMessage(message);
+                }
+      });
+    }
+  }, 0);
+
+  /*
+  // 이 방식으로는 플러터와 통신 실패
+  kakao.maps.event.addListener(infoWindow, 'domready', function () {
+    const commentBtn = document.getElementById('commentBtn');
+    if (commentBtn) {
+      commentBtn.addEventListener('click', function () {
+        alert('코멘트 버튼 클릭됨!');
+        // ✅ Dart에 마커 좌표 전송
+        const message = JSON.stringify({
+          latitude: latitude,
+          longitude: longitude,
+        });
+
+        // ✅ WebView에서 정의한 채널 이름과 동일하게!
+        if (window.flutterClickMarkerFromMap) {
+          window.flutterClickMarkerFromMap.postMessage(message);
+        }
+      });
+    }
+  });
+  */
 }
 
 function showHydrantCommentOverlay(lat, lng, contentHtml) {
