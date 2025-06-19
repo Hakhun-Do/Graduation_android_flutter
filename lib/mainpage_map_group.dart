@@ -341,13 +341,19 @@ class _MapGroupState extends State<MapGroup> {
           );
 
           if (result != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 추가되었습니다")));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 추가되었습니다(마커 최신화 중)")));
 
             final js = '''
         addMarker(null, JSON.stringify({latitude: $lat, longitude: $lng}), null, 24, 30, 0, 0, "$comment");
       ''';
             await _kakaoMapController?.evalJavascript(js);
           }
+
+          await updateMapMarkers( // 마커 생성 함수 호출
+            kakaoMapController: _kakaoMapController!,
+            selectedCity: ctp,
+            selectedTown: sig,
+          );
         },
       )
 
@@ -455,8 +461,13 @@ class _MapGroupState extends State<MapGroup> {
                                         lat.toString(),
                                         lng.toString(),
                                       );
-                                      if (result3) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 삭제되었습니다")));}
+                                      if (result3) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 삭제되었습니다(마커 최신화 중)")));}
                                       Navigator.pop(context);
+                                      await updateMapMarkers( // 마커 생성 함수 호출
+                                        kakaoMapController: _kakaoMapController!,
+                                        selectedCity: ctp,
+                                        selectedTown: sig,
+                                      );
                                     },
                                     child: Text('삭제'),
                                   ),
@@ -478,8 +489,13 @@ class _MapGroupState extends State<MapGroup> {
                                         '이상',
                                         adr,
                                       );
-                                      if (result4 != null) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 신고되었습니다")));}
+                                      if (result4 != null) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 신고되었습니다(마커 최신화 중)")));}
                                       Navigator.pop(context);
+                                      await updateMapMarkers( // 마커 생성 함수 호출
+                                        kakaoMapController: _kakaoMapController!,
+                                        selectedCity: ctp,
+                                        selectedTown: sig,
+                                      );
                                     },
                                     child: Text('신고'),
                                   ),
@@ -586,44 +602,221 @@ class _MapGroupState extends State<MapGroup> {
       _selectedCity = addressInfo['city'];
       _selectedTown = addressInfo['town'];
 
+      await updateMapMarkers( // 마커 생성 함수 호출
+        kakaoMapController: _kakaoMapController!,
+        selectedCity: _selectedCity!,
+        selectedTown: _selectedTown!,
+      );
+
+    } catch (e) {
+      print("❌ 내 위치로 이동 중 오류 발생: $e");
+    }
+  }
+
+  Future<void> showHydrantOverlay({
+    required double lat,
+    required double lng,
+    required String htmlContent,
+  }) async {
+    final js = '''
+      hydrantOverlay(${lat}, ${lng}, "${htmlContent.replaceAll('"', '\\"')}");
+    ''';
+    await _webViewController.runJavaScript(js);
+  }
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied.');
+    }
+    return await Geolocator.getCurrentPosition();
+  }
+
+  Future<Map<String, String>> getFullAddressFromLatLng(double lat, double lng) async {
+    const String kakaoApiKey = '206075c96a586adaec930981a17a3668';
+
+    final coordToRegion = Uri.parse(
+        'https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
+    final coordToAddress = Uri.parse(
+        'https://dapi.kakao.com/v2/local/geo/coord2address.json?x=$lng&y=$lat');
+
+    final regionRes = await http.get(
+      coordToRegion,
+      headers: {
+        'Authorization': 'KakaoAK $kakaoApiKey',
+        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp',
+      },
+    );
+
+    final addressRes = await http.get(
+      coordToAddress,
+      headers: {
+        'Authorization': 'KakaoAK $kakaoApiKey',
+        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp',
+      },
+    );
+
+    if (regionRes.statusCode == 200 && addressRes.statusCode == 200) {
+      final regionData = jsonDecode(regionRes.body)['documents'][0];
+      final addressData = jsonDecode(addressRes.body)['documents'][0]['address'];
+
+      final city = regionData['region_1depth_name'];
+      final town = regionData['region_2depth_name'];
+      final address = addressData['address_name'];
+
+      print("✅ 좌표 주소 변환 결과: city=$city, town=$town, address=$address");
+
+      return {
+        'city': city,
+        'town': town,
+        'address': address,
+      };
+    } else {
+      throw Exception(
+          '주소 변환 실패\nregion: ${regionRes.body}\naddress: ${addressRes.body}');
+    }
+  }
+
+  Widget _buildDropdowns() {
+    final cityList = regionMap.keys.toList();
+    final townList = _selectedCity != null ? regionMap[_selectedCity!]!.keys.toList() : [];
+    final districtList = (_selectedCity != null && _selectedTown != null)
+        ? regionMap[_selectedCity!]![_selectedTown!] ?? []
+        : [];
+
+    return Padding(
+      padding: const EdgeInsets.all(15.0),
+      child: Column(
+        children: [
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: '시/도 선택',
+              border: OutlineInputBorder(),
+              helperText: _mapReady ? null : '지도가 로딩될 때까지 기다려 주세요',
+            ),
+            value: _selectedCity,
+            items: cityList.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
+            onChanged: _mapReady
+                ? (value) {
+              setState(() {
+                _selectedCity = value;
+                _selectedTown = null;
+                _selectedDistrict = null;
+              });
+            }
+                : null,
+          ),
+          const SizedBox(height: 10),
+          if (_selectedCity != null)
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: '시/군 선택', border: OutlineInputBorder()),
+              value: _selectedTown,
+              items: townList.map<DropdownMenuItem<String>>((town) => DropdownMenuItem<String>(
+                value: town,
+                child: Text(town),
+              )).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedTown = value;
+                  _selectedDistrict = null;
+                });
+              },
+            ),
+          const SizedBox(height: 10),
+          if (_selectedTown != null)
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: '구/읍/면 선택', border: OutlineInputBorder()),
+              value: _selectedDistrict,
+              items: districtList.map<DropdownMenuItem<String>>((district) => DropdownMenuItem<String>(
+                value: district,
+                child: Text(district),
+              )).toList(),
+              onChanged: (value) async {
+                setState(() {
+                  _selectedDistrict = value;
+                });
+
+                if (_mapReady && _kakaoMapController != null && _selectedCity != null && _selectedTown != null) {
+                  final keyword = "$_selectedCity $_selectedTown $_selectedDistrict";
+                  print("🔍 검색 실행: $keyword");
+
+                  // 1. Flutter → JS 검색 (기존)
+                  _kakaoMapController!.evalJavascript(
+                    'searchKeywordFlutterBridge.postMessage("$keyword");',
+                  );
+
+                  await updateMapMarkers( // 마커 생성 함수 호출
+                    kakaoMapController: _kakaoMapController!,
+                    selectedCity: _selectedCity!,
+                    selectedTown: _selectedTown!,
+                  );
+                }
+              },
+
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 마커 생성 함수
+  Future<void> updateMapMarkers({
+    required KakaoMapController kakaoMapController,
+    required String selectedCity,
+    required String selectedTown,
+  }) async {
+    try {
       // 2. ✅ 기존 마커 제거 (JS 함수 호출)
-      await _kakaoMapController!.evalJavascript('clear();');
+      await kakaoMapController!.evalJavascript('clear();');
 
       // Future 객체들을 변수로 준비
       final Future<List<Map<String, dynamic>>> hydrantFuture =
       FireHydrantService().fetchHydrantData(
-        ctprvnNm: _selectedCity!,
-        signguNm: _selectedTown,
+        ctprvnNm: selectedCity!,
+        signguNm: selectedTown,
       ); // 소방용수시설
 
       final Future<List<Map<String, dynamic>>> truckFuture =
       FireTruckZoneService().fetchFireTruckZones(
-        ctprvnNm: _selectedCity!,
-        signguNm: _selectedTown,
+        ctprvnNm: selectedCity!,
+        signguNm: selectedTown,
       ); // 소방차전용구역
 
       final Future<List<Map<String, dynamic>>> problemFuture =
       ProblemMarkerService().fetchProblemData(
-        ctprvnNm: _selectedCity!,
-        signguNm: _selectedTown,
+        ctprvnNm: selectedCity!,
+        signguNm: selectedTown,
       ); // 통행불가
 
       final Future<List<Map<String, dynamic>>> breakdownFuture =
       BreakdownMarkerService().fetchBreakdownData(
-        ctprvnNm: _selectedCity!,
-        signguNm: _selectedTown,
+        ctprvnNm: selectedCity!,
+        signguNm: selectedTown,
       ); // 고장, 이상
 
       final Future<List<Map<String, dynamic>>> hydrantAddFuture =
       HydrantAddMarkerService().fetchHydrantAddData(
-        ctprvnNm: _selectedCity!,
-        signguNm: _selectedTown,
+        ctprvnNm: selectedCity!,
+        signguNm: selectedTown,
       ); // 소방용수시설 추가
 
       final Future<List<Map<String, dynamic>>> truckAddFuture =
       TruckAddMarkerService().fetchTruckAddData(
-        ctprvnNm: _selectedCity!,
-        signguNm: _selectedTown,
+        ctprvnNm: selectedCity!,
+        signguNm: selectedTown,
       ); // 소방차전용구역 추가
 
       // 여기서 Future 객체들을 동시에 실행
@@ -791,377 +984,13 @@ class _MapGroupState extends State<MapGroup> {
 
       try {
         print("🧪 마커 JS 전송: ${js.substring(0, 300)}...");
-        await _kakaoMapController!.evalJavascript(js);
+        await kakaoMapController!.evalJavascript(js);
       } catch (e) {
         print("❌ JS 실행 오류: $e");
       }
-
     } catch (e) {
-      print("❌ 내 위치로 이동 중 오류 발생: $e");
+      print('❌ 마커 업데이트 중 오류: $e');
     }
-  }
-
-  Future<void> showHydrantOverlay({
-    required double lat,
-    required double lng,
-    required String htmlContent,
-  }) async {
-    final js = '''
-      hydrantOverlay(${lat}, ${lng}, "${htmlContent.replaceAll('"', '\\"')}");
-    ''';
-    await _webViewController.runJavaScript(js);
-  }
-
-  Future<Position> _determinePosition() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
-    }
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error('Location permissions are permanently denied.');
-    }
-    return await Geolocator.getCurrentPosition();
-  }
-
-  Future<Map<String, String>> getFullAddressFromLatLng(double lat, double lng) async {
-    const String kakaoApiKey = '206075c96a586adaec930981a17a3668';
-
-    final coordToRegion = Uri.parse(
-        'https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
-    final coordToAddress = Uri.parse(
-        'https://dapi.kakao.com/v2/local/geo/coord2address.json?x=$lng&y=$lat');
-
-    final regionRes = await http.get(
-      coordToRegion,
-      headers: {
-        'Authorization': 'KakaoAK $kakaoApiKey',
-        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp',
-      },
-    );
-
-    final addressRes = await http.get(
-      coordToAddress,
-      headers: {
-        'Authorization': 'KakaoAK $kakaoApiKey',
-        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp',
-      },
-    );
-
-    if (regionRes.statusCode == 200 && addressRes.statusCode == 200) {
-      final regionData = jsonDecode(regionRes.body)['documents'][0];
-      final addressData = jsonDecode(addressRes.body)['documents'][0]['address'];
-
-      final city = regionData['region_1depth_name'];
-      final town = regionData['region_2depth_name'];
-      final address = addressData['address_name'];
-
-      print("✅ 좌표 주소 변환 결과: city=$city, town=$town, address=$address");
-
-      return {
-        'city': city,
-        'town': town,
-        'address': address,
-      };
-    } else {
-      throw Exception(
-          '주소 변환 실패\nregion: ${regionRes.body}\naddress: ${addressRes.body}');
-    }
-  }
-
-  Widget _buildDropdowns() {
-    final cityList = regionMap.keys.toList();
-    final townList = _selectedCity != null ? regionMap[_selectedCity!]!.keys.toList() : [];
-    final districtList = (_selectedCity != null && _selectedTown != null)
-        ? regionMap[_selectedCity!]![_selectedTown!] ?? []
-        : [];
-
-    return Padding(
-      padding: const EdgeInsets.all(15.0),
-      child: Column(
-        children: [
-          DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: '시/도 선택',
-              border: OutlineInputBorder(),
-              helperText: _mapReady ? null : '지도가 로딩될 때까지 기다려 주세요',
-            ),
-            value: _selectedCity,
-            items: cityList.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
-            onChanged: _mapReady
-                ? (value) {
-              setState(() {
-                _selectedCity = value;
-                _selectedTown = null;
-                _selectedDistrict = null;
-              });
-            }
-                : null,
-          ),
-          const SizedBox(height: 10),
-          if (_selectedCity != null)
-            DropdownButtonFormField<String>(
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: '시/군 선택', border: OutlineInputBorder()),
-              value: _selectedTown,
-              items: townList.map<DropdownMenuItem<String>>((town) => DropdownMenuItem<String>(
-                value: town,
-                child: Text(town),
-              )).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedTown = value;
-                  _selectedDistrict = null;
-                });
-              },
-            ),
-          const SizedBox(height: 10),
-          if (_selectedTown != null)
-            DropdownButtonFormField<String>(
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: '구/읍/면 선택', border: OutlineInputBorder()),
-              value: _selectedDistrict,
-              items: districtList.map<DropdownMenuItem<String>>((district) => DropdownMenuItem<String>(
-                value: district,
-                child: Text(district),
-              )).toList(),
-              onChanged: (value) async {
-                setState(() {
-                  _selectedDistrict = value;
-                });
-
-                if (_mapReady && _kakaoMapController != null && _selectedCity != null && _selectedTown != null) {
-                  final keyword = "$_selectedCity $_selectedTown $_selectedDistrict";
-                  print("🔍 검색 실행: $keyword");
-
-                  // 1. Flutter → JS 검색 (기존)
-                  _kakaoMapController!.evalJavascript(
-                    'searchKeywordFlutterBridge.postMessage("$keyword");',
-                  );
-
-                  // 2. ✅ 기존 마커 제거 (JS 함수 호출)
-                  await _kakaoMapController!.evalJavascript('clear();');
-
-                  // Future 객체들을 변수로 준비
-                  final Future<List<Map<String, dynamic>>> hydrantFuture =
-                  FireHydrantService().fetchHydrantData(
-                    ctprvnNm: _selectedCity!,
-                    signguNm: _selectedTown,
-                  ); // 소방용수시설
-
-                  final Future<List<Map<String, dynamic>>> truckFuture =
-                  FireTruckZoneService().fetchFireTruckZones(
-                    ctprvnNm: _selectedCity!,
-                    signguNm: _selectedTown,
-                  ); // 소방차전용구역
-
-                  final Future<List<Map<String, dynamic>>> problemFuture =
-                  ProblemMarkerService().fetchProblemData(
-                    ctprvnNm: _selectedCity!,
-                    signguNm: _selectedTown,
-                  ); // 통행불가
-
-                  final Future<List<Map<String, dynamic>>> breakdownFuture =
-                  BreakdownMarkerService().fetchBreakdownData(
-                    ctprvnNm: _selectedCity!,
-                    signguNm: _selectedTown,
-                  ); // 고장, 이상
-
-                  final Future<List<Map<String, dynamic>>> hydrantAddFuture =
-                  HydrantAddMarkerService().fetchHydrantAddData(
-                    ctprvnNm: _selectedCity!,
-                    signguNm: _selectedTown,
-                  ); // 소방용수시설 추가
-
-                  final Future<List<Map<String, dynamic>>> truckAddFuture =
-                  TruckAddMarkerService().fetchTruckAddData(
-                    ctprvnNm: _selectedCity!,
-                    signguNm: _selectedTown,
-                  ); // 소방차전용구역 추가
-
-                  // 여기서 Future 객체들을 동시에 실행
-                  final results = await Future.wait([
-                    hydrantFuture,
-                    truckFuture,
-                    problemFuture,
-                    breakdownFuture,
-                    hydrantAddFuture,
-                    truckAddFuture,
-                  ]);
-
-                  // 결과 꺼내기
-                  final hydrantData = results[0];
-                  final truckData = results[1];
-                  final problemData = results[2];
-                  final breakdownData = results[3];
-                  final hydrantAddData = results[4];
-                  final truckAddData = results[5];
-
-                  // 필터링은 UI thread에서 너무 오래 걸리지 않게 간단 처리
-                  final hydrantMarkers = hydrantData.map((hydrant) {
-                    final lat = double.tryParse(hydrant['latitude']?.toString() ?? '');
-                    final lng = double.tryParse(hydrant['longitude']?.toString() ?? '');
-                    final address = hydrant['rdnmadr'] ?? '위치 정보 없음';
-                    final lnmadr = hydrant['lnmadr'] ?? '-';
-                    final descLc = hydrant['descLc'] ?? '-';
-                    final prtcYn = hydrant['prtcYn'] ?? '미확인';
-                    final institutionNm = hydrant['institutionNm'] ?? '-';
-                    final institutionPhoneNumber = hydrant['institutionPhoneNumber'] ?? '-';
-                    final referenceDate = hydrant['referenceDate'] ?? '미등록';
-                    if (lat != null && lng != null) {
-                      return {
-                        'latitude': lat,
-                        'longitude': lng,
-                        'address': address,
-                        'type': 'hydrant',
-                        'lnmadr': lnmadr,
-                        'descLc': descLc,
-                        'prtcYn': prtcYn,
-                        'institutionNm': institutionNm,
-                        'institutionPhoneNumber': institutionPhoneNumber,
-                        'referenceDate': referenceDate,
-                      };
-                    }
-                    return null;
-                  }).whereType<Map<String, dynamic>>().toList();
-
-                  final truckMarkers = truckData.map((zone) {
-                    final lat = double.tryParse(zone['latitude']?.toString() ?? '');
-                    final lng = double.tryParse(zone['longitude']?.toString() ?? '');
-                    final address = zone['lnmadr'] ?? '위치 정보 없음';
-
-                    // 각 상세 필드 추출 (null이면 기본값 대입)
-                    final prkcmprt = zone['prkcmprt'] ?? '-';
-                    final copertnHouseNm = zone['copertnHouseNm'] ?? '-';
-                    final dongNo = zone['dongNo'] ?? '-';
-                    final aphusPhoneNumber = zone['aphusPhoneNumber'] ?? '-';
-                    final institutionNm = zone['institutionNm'] ?? '-';
-                    final institutionPhoneNumber = zone['institutionPhoneNumber'] ?? '-';
-                    final referenceDate = zone['referenceDate'] ?? '-';
-
-                    if (lat != null && lng != null) {
-                      return {
-                        'latitude': lat,
-                        'longitude': lng,
-                        'address': address,
-                        'type': 'firetruck',
-
-                        // 상세 필드 추가
-                        'lnmadr': address,
-                        'prkcmprt': prkcmprt,
-                        'copertnHouseNm': copertnHouseNm,
-                        'dongNo': dongNo,
-                        'aphusPhoneNumber': aphusPhoneNumber,
-                        'institutionNm': institutionNm,
-                        'institutionPhoneNumber': institutionPhoneNumber,
-                        'referenceDate': referenceDate,
-                      };
-                    }
-                    return null;
-                  }).whereType<Map<String, dynamic>>().toList();
-
-                  final problemMarkers = problemData.map((zone) {
-                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
-                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    final address = zone['addr'] ?? '-';
-                    final category = zone['cat'] ?? '-';
-                    final date = zone['date'] ?? '-';
-                    if (lat != null && lng != null) {
-                      return {
-                        'latitude': lat,
-                        'longitude': lng,
-                        'address': address,
-                        'category': category,
-                        'date': date,
-                        'type': 'problem',
-                      };
-                    }
-                    return null;
-                  }).whereType<Map<String, dynamic>>().toList();
-
-                  final breakdownMarkers = breakdownData.map((zone) {
-                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
-                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    final address = zone['addr'] ?? '-';
-                    final category = zone['cat'] ?? '-';
-                    final date = zone['date'] ?? '-';
-                    if (lat != null && lng != null) {
-                      return {
-                        'latitude': lat,
-                        'longitude': lng,
-                        'address': address,
-                        'category': category,
-                        'date': date,
-                        'type': 'breakdown',
-                      };
-                    }
-                    return null;
-                  }).whereType<Map<String, dynamic>>().toList();
-
-                  final hydrantAddMarkers = hydrantAddData.map((zone) {
-                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
-                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    final address = zone['addr'] ?? '-';
-                    final category = zone['cat'] ?? '-';
-                    final date = zone['date'] ?? '-';
-                    if (lat != null && lng != null) {
-                      return {
-                        'latitude': lat,
-                        'longitude': lng,
-                        'address': address,
-                        'category': category,
-                        'date': date,
-                        'type': 'hydrantAdd',
-                      };
-                    }
-                    return null;
-                  }).whereType<Map<String, dynamic>>().toList();
-
-                  final truckAddMarkers = truckAddData.map((zone) {
-                    final lat = double.tryParse(zone['id']?['lat']?.toString() ?? '');
-                    final lng = double.tryParse(zone['id']?['lon']?.toString() ?? '');
-                    final address = zone['addr'] ?? '-';
-                    final category = zone['cat'] ?? '-';
-                    final date = zone['date'] ?? '-';
-                    if (lat != null && lng != null) {
-                      return {
-                        'latitude': lat,
-                        'longitude': lng,
-                        'address': address,
-                        'category': category,
-                        'date': date,
-                        'type': 'truckAdd',
-                      };
-                    }
-                    return null;
-                  }).whereType<Map<String, dynamic>>().toList();
-
-                  final allMarkers = [...hydrantMarkers, ...truckMarkers, ...problemMarkers, ...hydrantAddMarkers, ...truckAddMarkers, ...breakdownMarkers,];
-
-                  final js = '''
-                    addMarkersFromList(${jsonEncode(allMarkers)});
-                  ''';
-
-                  try {
-                    print("🧪 마커 JS 전송: ${js.substring(0, 300)}...");
-                    await _kakaoMapController!.evalJavascript(js);
-                  } catch (e) {
-                    print("❌ JS 실행 오류: $e");
-                  }
-                }
-              },
-
-            ),
-        ],
-      ),
-    );
   }
 
   @override
