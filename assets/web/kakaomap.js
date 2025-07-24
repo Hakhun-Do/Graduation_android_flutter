@@ -88,9 +88,9 @@ function addMarkersFromList(markerListJson) {
 
     const markerImage = new kakao.maps.MarkerImage(
       imageSrc,
-      //마커 크기 24, 24 -> 32, 34로 수정함에 따라 offset도 변경
-      new kakao.maps.Size(32, 34),
-      { offset: new kakao.maps.Point(16, 34) }
+      //마커 크기 24, 24 -> 40, 44로 수정함에 따라 offset도 변경
+      new kakao.maps.Size(40, 44),
+      { offset: new kakao.maps.Point(20, 44) }
     );
 
     const marker = new kakao.maps.Marker({ position: latLng, image: markerImage });

@@ -344,9 +344,9 @@ class _MapGroupState extends State<MapGroup> {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ 마커가 추가되었습니다(마커 최신화 중)")));
 
             final js = '''
-        addMarker(null, JSON.stringify({latitude: $lat, longitude: $lng}), null, 32, 34, 0, 0, "$comment");
+        addMarker(null, JSON.stringify({latitude: $lat, longitude: $lng}), null, 40, 44, 0, 0, "$comment");
       ''';
-            //추가되는 마커 크기 24, 30 -> 32, 34으로 지정
+            //추가되는 마커 크기 24, 30 -> 40, 44으로 지정
             await _kakaoMapController?.evalJavascript(js);
           }
 
