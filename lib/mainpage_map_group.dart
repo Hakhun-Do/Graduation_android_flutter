@@ -346,7 +346,7 @@ class _MapGroupState extends State<MapGroup> {
             final js = '''
         addMarker(null, JSON.stringify({latitude: $lat, longitude: $lng}), null, 40, 44, 0, 0, "$comment");
       ''';
-            //추가되는 마커 크기 24, 30 -> 40, 44으로 지정
+            //새롭게 추가되는 마커 크기 24, 30 -> 40, 44으로 지정
             await _kakaoMapController?.evalJavascript(js);
           }
 
@@ -544,12 +544,31 @@ class _MapGroupState extends State<MapGroup> {
   Future<void> _initLocationAndMoveCamera() async {
     try {
       Position position = await _determinePosition();
+
       if (_kakaoMapController != null) {
+        // 1. 지도를 현재 위치로 이동
         _kakaoMapController!.moveCamera(
           LatLng(position.latitude, position.longitude),
           zoomLevel: 3,
         );
+
+        // 2. 해당 위치에 마커 추가
+        final jsAddMarker = '''
+        addMarker(null, JSON.stringify({latitude: ${position.latitude}, longitude: ${position.longitude}}), null, 40, 44, 0, 0, "현재 위치");
+        ''';
+        await _kakaoMapController!.evalJavascript(jsAddMarker);
+
       }
+      // (선택) 마커 추가 후 마커 데이터 새로 불러오고 싶으면 아래도 호출
+      /*final addressInfo = await getAddressFromCoordinates(position.latitude, position.longitude);
+      _selectedCity = addressInfo['city'];
+      _selectedTown = addressInfo['town'];
+
+      await updateMapMarkers(
+        kakaoMapController: _kakaoMapController!,
+        selectedCity: _selectedCity!,
+        selectedTown: _selectedTown!,
+      );*/
     } catch (e) {
       print("❌ 위치 정보를 가져오는 중 오류 발생: $e");
     }
@@ -982,6 +1001,7 @@ class _MapGroupState extends State<MapGroup> {
       final js = '''
                     addMarkersFromList(${jsonEncode(allMarkers)});
                   ''';
+      //addMarkersFromList : 해당 위치 마커 표시하기 위한
 
       try {
         print("🧪 마커 JS 전송: ${js.substring(0, 300)}...");

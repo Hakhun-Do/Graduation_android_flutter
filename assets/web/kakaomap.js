@@ -436,7 +436,8 @@ window.onload = function () {
     });
 
     marker = new kakao.maps.Marker({ position: map.getCenter() });
-    marker.setMap(map);
+    //marker.setMap(map);
+    //초기 시작 화면 좌표(37.3626138, 126.9264801)에 마커 찍히는 함수
 
     const zoomControl = new kakao.maps.ZoomControl();
     map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
