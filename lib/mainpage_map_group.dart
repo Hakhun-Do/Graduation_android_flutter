@@ -540,6 +540,33 @@ class _MapGroupState extends State<MapGroup> {
         },
       );
   }
+  // 카카오 맵 api의 좌표를 주소로 변환해 주는 기능 요청하는 함수
+  Future<Map<String, String>> getAddressFromCoordinates(double lat, double lng) async {
+    const String kakaoApiKey = '206075c96a586adaec930981a17a3668';
+    final url = Uri.parse('https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'KakaoAK $kakaoApiKey',
+        'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp', // 최소한 이 형식 유지
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final regionInfo = data['documents'][0];
+      final city = regionInfo['region_1depth_name'];
+      final town = regionInfo['region_2depth_name'];
+      print('✅ GPS 좌표 주소 변환 결과 값 : $regionInfo');
+      return {
+        'city': city,
+        'town': town,
+      };
+    } else {
+      throw Exception('주소 변환 실패: ${response.body}');
+    }
+  }
 
   Future<void> _initLocationAndMoveCamera() async {
     try {
@@ -551,24 +578,18 @@ class _MapGroupState extends State<MapGroup> {
           LatLng(position.latitude, position.longitude),
           zoomLevel: 3,
         );
-
-        // 2. 해당 위치에 마커 추가
-        final jsAddMarker = '''
-        addMarker(null, JSON.stringify({latitude: ${position.latitude}, longitude: ${position.longitude}}), null, 40, 44, 0, 0, "현재 위치");
-        ''';
-        await _kakaoMapController!.evalJavascript(jsAddMarker);
-
       }
-      // (선택) 마커 추가 후 마커 데이터 새로 불러오고 싶으면 아래도 호출
-      /*final addressInfo = await getAddressFromCoordinates(position.latitude, position.longitude);
+      // 2. 현재 위치 기반의 행정구역 정보 가져오기
+      final addressInfo = await getAddressFromCoordinates(position.latitude, position.longitude);
       _selectedCity = addressInfo['city'];
       _selectedTown = addressInfo['town'];
 
+      // 3. 해당 지역의 마커들 불러와 지도에 표시
       await updateMapMarkers(
         kakaoMapController: _kakaoMapController!,
         selectedCity: _selectedCity!,
         selectedTown: _selectedTown!,
-      );*/
+      );
     } catch (e) {
       print("❌ 위치 정보를 가져오는 중 오류 발생: $e");
     }
@@ -587,35 +608,6 @@ class _MapGroupState extends State<MapGroup> {
         'panTo(${position.latitude}, ${position.longitude});',
       );
 
-      // 카카오 맵 api의 좌표를 주소로 변환해 주는 기능 요청하는 함수
-      Future<Map<String, String>> getAddressFromCoordinates(double lat, double lng) async {
-        const String kakaoApiKey = '206075c96a586adaec930981a17a3668';
-        final url = Uri.parse('https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=$lng&y=$lat');
-
-        final response = await http.get(
-          url,
-          headers: {
-            'Authorization': 'KakaoAK $kakaoApiKey',
-            'KA': 'sdk/1.0.0 os/android lang/ko-KR device/myApp', // 최소한 이 형식 유지
-          },
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final regionInfo = data['documents'][0];
-          final city = regionInfo['region_1depth_name'];
-          final town = regionInfo['region_2depth_name'];
-          print('✅ GPS 좌표 주소 변환 결과 값 : $regionInfo');
-          return {
-            'city': city,
-            'town': town,
-          };
-        } else {
-          throw Exception('주소 변환 실패: ${response.body}');
-        }
-      }
-
-      // gps 이동후 해당 지역 마커 표시
       // 좌표로 변환 받은
       final addressInfo = await getAddressFromCoordinates(position.latitude, position.longitude);
 
