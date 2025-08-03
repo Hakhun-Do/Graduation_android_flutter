@@ -1,68 +1,107 @@
 import 'package:flutter/material.dart';
+import 'region_data.dart';  // regionMap을 선언한 파일 경로로 정확히 맞춰서
 
-class ChatGroup extends StatelessWidget {
-  final String importantGroup;
-  final String frequentGroup;
-  final String popularGroup;
+class SafeRegionSelector extends StatefulWidget {
+  const SafeRegionSelector({super.key});
 
-  const ChatGroup({
-    super.key,
-    required this.importantGroup,
-    required this.frequentGroup,
-    required this.popularGroup,
-  });
+  @override
+  State<SafeRegionSelector> createState() => _SafeRegionSelectorState();
+}
+
+class _SafeRegionSelectorState extends State<SafeRegionSelector> {
+  String? selectedCity;
+  String? selectedDistrict;
+  String? selectedTown;
 
   @override
   Widget build(BuildContext context) {
+    final cities = regionMap.keys.toList();
+
+    final districts = (selectedCity != null && regionMap.containsKey(selectedCity))
+        ? regionMap[selectedCity]!.keys.toList()
+        : [];
+
+    final towns = (selectedCity != null &&
+        selectedDistrict != null &&
+        regionMap.containsKey(selectedCity) &&
+        regionMap[selectedCity]!.containsKey(selectedDistrict))
+        ? regionMap[selectedCity]![selectedDistrict]!
+        : [];
+
+    if (selectedCity != null && !cities.contains(selectedCity)) {
+      selectedCity = null;
+      selectedDistrict = null;
+      selectedTown = null;
+    }
+    if (selectedDistrict != null && !districts.contains(selectedDistrict)) {
+      selectedDistrict = null;
+      selectedTown = null;
+    }
+    if (selectedTown != null && !towns.contains(selectedTown)) {
+      selectedTown = null;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildGroupCard(
-            icon: Icons.pin,
-            title: '내가 고정한 게시글 & 게시판',
-            content: importantGroup),
-        SizedBox(height: 10),
-        _buildGroupCard(
-            icon: Icons.star, title: '내가 자주가는 게시판', content: frequentGroup),
-        SizedBox(height: 10),
-        _buildGroupCard(
-            icon: Icons.fireplace, title: '인기 게시판', content: popularGroup),
-      ],
-    );
-  }
+        DropdownButton<String>(
+          hint: Text('시/도 선택'),
+          value: selectedCity,
+          items: cities
+              .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedCity = value;
+              selectedDistrict = null;
+              selectedTown = null;
+            });
+          },
+        ),
+        SizedBox(height: 12),
+        DropdownButton<String>(
+          hint: Text('구/군 선택'),
+          value: selectedDistrict,
+          items: districts
+              .map((district) => DropdownMenuItem<String>(
+            value: district,
+            child: Text(district),
+          ))
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedDistrict = value;
+              selectedTown = null;
+            });
+          },
+        ),
 
-  Widget _buildGroupCard(
-      {required IconData icon,
-      required String title,
-      required String content}) {
-    return Container(
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon),
-              SizedBox(width: 10),
-              Text(
-                title,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
+
+        SizedBox(height: 12),
+        DropdownButton<String>(
+          hint: Text('동/읍/면 선택'),
+          value: selectedTown,
+          items: towns
+              .map((town) => DropdownMenuItem<String>(
+            value: town,
+            child: Text(town),
+          ))
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedTown = value;
+            });
+          },
+        ),
+
+
+        SizedBox(height: 20),
+        if (selectedCity != null && selectedDistrict != null && selectedTown != null)
+          Text(
+            '선택한 지역: $selectedCity > $selectedDistrict > $selectedTown',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
           ),
-          SizedBox(height: 10),
-          Text(content),
-          SizedBox(height: 10),
-          Text('• ~~~~~~~~~~'),
-          Text('• ***********'),
-          Text('• %%%%%%%%%%'),
-          Text('• @@@@@@'),
-        ],
-      ),
+      ],
     );
   }
 }

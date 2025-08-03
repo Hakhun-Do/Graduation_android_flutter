@@ -48,10 +48,9 @@ class MainPageState extends State<MainPage> {
           ? MapGroup() // 지도
           : _currentIndex == 1
           ? SingleChildScrollView( // ChatGroup을 ScrollView로 감쌈
-        child: ChatGroup(
-          importantGroup: '중요한 내용 1\n중요한 내용 2',
-          frequentGroup: '자주가는 내용 1\n자주가는 내용 2',
-          popularGroup: '인기 내용 1\n인기 내용 2',
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SafeRegionSelector(),
         ),
       ) // 채팅
           : SingleChildScrollView( // ProfileGroup을 ScrollView로 감쌈
