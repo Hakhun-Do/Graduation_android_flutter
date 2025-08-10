@@ -50,7 +50,7 @@ class MainPageState extends State<MainPage> {
           ? SingleChildScrollView( // ChatGroup을 ScrollView로 감쌈
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: SafeRegionSelector(),
+          child: RegionSelector(),
         ),
       ) // 채팅
           : SingleChildScrollView( // ProfileGroup을 ScrollView로 감쌈
