@@ -500,11 +500,15 @@ class _MapGroupState extends State<MapGroup> {
   }
 
   Widget _buildDropdowns() {
-    final cityList = regionMap.keys.toList();
+    final cityList = regionMap.keys.toSet().toList();
     final townList = _selectedCity != null ? regionMap[_selectedCity!]!.keys.toList() : [];
     final districtList = (_selectedCity != null && _selectedTown != null)
         ? regionMap[_selectedCity!]![_selectedTown!] ?? []
         : [];
+
+    if (!cityList.contains(_selectedCity)) _selectedCity = null;
+    if (!townList.contains(_selectedTown)) _selectedTown = null;
+    if (!districtList.contains(_selectedDistrict)) _selectedDistrict = null;
 
     return Padding(
       padding: const EdgeInsets.all(15.0),

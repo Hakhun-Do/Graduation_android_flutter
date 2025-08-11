@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'region_data.dart'; // 지역 데이터(Map 구조)
-import 'api_service.dart'; // ProblemMarkerService 정의
+import 'region_data.dart';
+import 'api_service.dart';
 
 class RegionSelector extends StatefulWidget {
   const RegionSelector({Key? key}) : super(key: key);
@@ -185,46 +185,58 @@ class _RegionSelectorState extends State<RegionSelector> {
             physics: const NeverScrollableScrollPhysics(),
             itemBuilder: (context, index) {
               final comment = _comments[index]['comment'] ?? '코멘트 없음';
-              final addr =
-                  "${_comments[index]['ctp'] ?? ''} ${_comments[index]['sig'] ?? ''}";
-              final detailAddr = _comments[index]['lnmadr'] ?? '';
-              final desc = _comments[index]['descLc'] ?? '';
+              final addr = _comments[index]['addr'] ?? '';
+              final cat = _comments[index]['cat'] ?? '';
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 6),
-                elevation: 2, // 그림자
+                elevation: 2,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.place, color: Colors.redAccent),
-                  title: Text(
-                    comment,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                  title: Row(
+                    children: [
+                      const Icon(Icons.comment, color: Colors.black87, size: 18), // 코멘트 아이콘
+                      const SizedBox(width: 4),
+                      Expanded( // 긴 코멘트일 때 줄바꿈 대응
+                        child: Text(
+                          comment,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(addr,
-                          style:
-                          const TextStyle(color: Colors.grey, fontSize: 13)),
-                      if (detailAddr.isNotEmpty)
-                        Text(detailAddr,
-                            style:
-                            const TextStyle(color: Colors.grey, fontSize: 12)),
-                      if (desc.isNotEmpty)
-                        Text(desc,
-                            style: const TextStyle(
-                                color: Colors.black87, fontSize: 13)),
+                      if (addr.isNotEmpty)
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, color: Colors.grey, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              addr,
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      if (cat.isNotEmpty)
+                        Row(
+                          children: [
+                            const Icon(Icons.category, color: Colors.black87, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              cat,
+                              style: const TextStyle(color: Colors.black87, fontSize: 13),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
-                  onTap: () {
-                    // 지도 이동이나 추가 액션을 연결할 수 있음
-                    print("📍 선택한 위치: $addr / $detailAddr");
-                  },
                 ),
               );
             },
