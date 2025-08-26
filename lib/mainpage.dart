@@ -4,36 +4,75 @@ import 'mainpage_chat_group.dart';
 import 'mainpage_profile_group.dart';
 import 'package:graduation_project/api_service.dart';
 
+// mainpage.dart
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
-
   @override
   MainPageState createState() => MainPageState();
 }
 
 class MainPageState extends State<MainPage> {
+
+  final GlobalKey<MapGroupState> _mapKey = GlobalKey<MapGroupState>();
+
   int _currentIndex = 0;
-  Map<String, dynamic>? _userProfile; // 회원 정보 저장 변수
+  Map? _userProfile;
+  double? _moveLat;
+  double? _moveLon;
   final ApiService apiService = ApiService();
+
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile(); // 회원 정보 불러오기
+    _loadUserProfile();
+
+    _pages = [
+      MapGroup(
+        key: _mapKey,
+        initialLat: _moveLat,
+        initialLon: _moveLon,
+      ), // 지도
+      RegionSelector(
+        onMoveToMap: () => _changeClass(0),
+        onMapMove: (lat, lon) {
+          print('Before setState: _moveLat=$_moveLat, _moveLon=$_moveLon');
+          print('onMapMove called with lat=$lat, lon=$lon');
+          setState(() {
+            _moveLat = lat;
+            _moveLon = lon;
+            _currentIndex = 0; // 지도 탭으로 전환
+          });
+          print('After setState: _moveLat=$_moveLat, _moveLon=$_moveLon');
+          _mapKey.currentState?.moveMap(lat, lon);
+        },
+      ),
+
+      ProfileGroup(
+        name: _userProfile?['userName'] ?? '이름 없음',
+        phoneNumber: _userProfile?['userNum'] ?? '번호 없음',
+        id: _userProfile?['userId'] ?? '아이디 없음',
+        apiService: apiService,
+      ),
+    ];
   }
 
-  // 🔹 회원 정보 불러오는 함수
-  Future<void> _loadUserProfile() async {
-    final apiService = ApiService();
+  Future _loadUserProfile() async {
     final profile = await apiService.fetchUserProfile();
     if (profile != null) {
       setState(() {
-        _userProfile = profile; // 받아온 데이터 저장
+        _userProfile = profile;
+        _pages[2] = ProfileGroup(
+          name: _userProfile?['userName'] ?? '이름 없음',
+          phoneNumber: _userProfile?['userNum'] ?? '번호 없음',
+          id: _userProfile?['userId'] ?? '아이디 없음',
+          apiService: apiService,
+        );
       });
     }
   }
 
-  // 🔹 하단 네비게이션 바에서 화면을 변경하는 함수
   void _changeClass(int index) {
     setState(() {
       _currentIndex = index;
@@ -43,26 +82,13 @@ class MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('소방와방')),
-      body: _currentIndex == 0
-          ? MapGroup() // 지도
-          : _currentIndex == 1
-          ? SingleChildScrollView( // ChatGroup을 ScrollView로 감쌈
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: RegionSelector(),
-        ),
-      ) // 채팅
-          : SingleChildScrollView( // ProfileGroup을 ScrollView로 감쌈
-        child: ProfileGroup(
-          name: _userProfile?['userName'] ?? '이름 없음',
-          phoneNumber: _userProfile?['userNum'] ?? '번호 없음',
-          id: _userProfile?['userId'] ?? '아이디 없음',
-          apiService: apiService, // 의존성 주입
-        ),
-      ), // 프로필
+      appBar: AppBar(title: const Text('소방와방')),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.map), label: '지도'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: '채팅'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '프로필'),

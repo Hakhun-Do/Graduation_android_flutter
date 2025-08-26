@@ -414,55 +414,58 @@ class ApiService {
   }
 }
 
-class ProblemMarkerService { // 서버 DB에서 통행불가 마커 요청
-
+class ProblemMarkerService {
   Future<List<Map<String, dynamic>>> fetchProblemData({
-    required String ctprvnNm, // 시도명
-    String? signguNm, // 시군구명
-    //String? districtNm, //구읍면명
-    //int numOfRows = 100, // 한 페이지에서 가져올 데이터 수
+    required String ctprvnNm,
+    String? signguNm,
+    String? comment,
   }) async {
     final url = 'http://175.106.98.190:1040/pin/all';
-    //int page = 1;
-    List<Map<String, dynamic>> allMarkerDb = [];
-
     final uri = Uri.parse(
       '$url'
           '?cat=통행불가'
           '&ctprvnNm=${Uri.encodeComponent(ctprvnNm)}'
-          '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}',
+          '${signguNm != null ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}'
+          '${comment != null && comment.isNotEmpty ? '&comment=${Uri.encodeComponent(comment)}' : ''}',
     );
 
-    try {
-      final response = await http.get(uri, headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0',
-      });
+    final response = await http.get(uri, headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0',
+    });
 
-      if (response.statusCode == 200) {
-        try {
-          final decodedBody = utf8.decode(response.bodyBytes);
-          final jsonBody = json.decode(decodedBody);
-          if (jsonBody is List) {
-            allMarkerDb.addAll(jsonBody.cast<Map<String, dynamic>>());
-          } else {
-            print('❌ 예상과 다른 응답 형태입니다: ${jsonBody.runtimeType}');
+    if (response.statusCode == 200) {
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final jsonBody = json.decode(decodedBody);
+
+      if (jsonBody is List) {
+        // 각 항목에서 lat, lon 정보 추출
+        return jsonBody.map<Map<String, dynamic>>((item) {
+          double? lat;
+          double? lon;
+          if (item['id'] != null) {
+            lat = double.tryParse(item['id']['lat']?.toString() ?? '');
+            lon = double.tryParse(item['id']['lon']?.toString() ?? '');
           }
-        } catch (e) {
-          print('❌ JSON 파싱 중 예외 발생: $e');
-        }
+          return {
+            ...item,
+            'latitude': lat,
+            'longitude': lon,
+          };
+        }).toList();
       } else {
-        print('❌ 서버 응답 오류: ${response.statusCode}');
-        print('본문: ${response.body}');
+        print('❌ 예상과 다른 응답 형태: ${jsonBody.runtimeType}');
+        return [];
       }
-    } catch (e) {
-      print('❌ 예외 발생: $e');
+    } else {
+      print('❌ 서버 응답 오류: ${response.statusCode}');
+      print('본문: ${response.body}');
+      return [];
     }
-
-    print('✅ (DB) 통행불가 마커 ${allMarkerDb.length}개 받아옴');
-    return allMarkerDb;
   }
 }
+
+
 
 class BreakdownMarkerService { // 서버 DB에서 이상 마커 요청
 

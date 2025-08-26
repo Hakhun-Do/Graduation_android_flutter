@@ -13,16 +13,47 @@ import 'api_service.dart';
 
 
 class MapGroup extends StatefulWidget {
-  const MapGroup({super.key});
+  final double? initialLat;
+  final double? initialLon;
+
+  const MapGroup({
+    Key? key,
+    this.initialLat,
+    this.initialLon,
+  }): super(key : key);
 
   @override
-  _MapGroupState createState() => _MapGroupState();
+  MapGroupState createState() => MapGroupState();
 }
 
-class _MapGroupState extends State<MapGroup> {
+class MapGroupState extends State<MapGroup> {
   KakaoMapController? _kakaoMapController;
   LatLng? _lastLatLng;
   int _lastZoomLevel = 0;
+
+  void moveMap(double lat, double lon) async {
+    if (_kakaoMapController != null) {
+      print('지도 이동 실행: ($lat, $lon)');
+      _kakaoMapController!.moveCamera(LatLng(lat, lon), zoomLevel: 3);
+
+      final addressInfo = await getFullAddressFromLatLng(lat, lon);
+      final city = addressInfo['city'];
+      final town = addressInfo['town'];
+
+      if (city != null && town != null) {
+        await updateMapMarkers(
+          kakaoMapController: _kakaoMapController!,
+          selectedCity: city,
+          selectedTown: town,
+        );
+      }
+    } else {
+      print('지도 컨트롤러가 아직 준비되지 않았습니다.');
+    }
+  }
+
+
+
 
   late final WebViewController _webViewController;
 
@@ -33,9 +64,20 @@ class _MapGroupState extends State<MapGroup> {
   bool _mapReady = true;
   bool _isPanelExpanded = true;
 
+  void moveMapTo(double lat, double lon) {
+    if (_kakaoMapController != null) {
+      print('지도 이동 실행: ($lat, $lon)');
+      _kakaoMapController!.moveCamera(LatLng(lat, lon), zoomLevel: 15); // 적절한 zoomLevel 설정
+    } else {
+      print('지도 컨트롤러가 아직 준비되지 않았습니다.');
+    }
+  }
+
+
   @override
   void initState() {
     super.initState();
+
     _webViewController = WebViewController()
       ..addJavaScriptChannel(
         'flutterWebViewReady',
@@ -812,57 +854,70 @@ class _MapGroupState extends State<MapGroup> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: KakaoMap(
-            onMapCreated: (controller) {
-              _kakaoMapController = controller;
-              _initLocationAndMoveCamera();
-            },
-            onMapTap: (latLng) => print("📍 맵 탭: ${jsonEncode(latLng)}"),
-            onCameraIdle: (latLng, zoomLevel) => print("📸 카메라 이동 완료: ${jsonEncode(latLng)}, 줌 레벨: $zoomLevel"),
-            onZoomChanged: (zoomLevel) => print("🔍 줌 변경: $zoomLevel"),
-            webViewController: _webViewController,
+    return Scaffold(
+      // AppBar는 필요 없으면 생략 가능
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: KakaoMap(
+              onMapCreated: (controller) {
+                _kakaoMapController = controller;
+                _initLocationAndMoveCamera();
+              },
+              onMapTap: (latLng) =>
+                  print("📍 맵 탭: ${jsonEncode(latLng)}"),
+              onCameraIdle: (latLng, zoomLevel) =>
+                  print("📸 카메라 이동 완료: ${jsonEncode(latLng)}, 줌 레벨: $zoomLevel"),
+              onZoomChanged: (zoomLevel) =>
+                  print("🔍 줌 변경: $zoomLevel"),
+              webViewController: _webViewController,
+            ),
           ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          child: SafeArea(
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 300),
-              height: _isPanelExpanded ? 270 : 50,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
-                boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black26)],
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-              ),
-              child: Column(
-                children: [
-                  IconButton(
-                    icon: Icon(_isPanelExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
-                    onPressed: () => setState(() => _isPanelExpanded = !_isPanelExpanded),
-                  ),
-                  if (_isPanelExpanded)
-                    Expanded(child: SingleChildScrollView(child: _buildDropdowns())),
-                ],
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: SafeArea(
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 300),
+                height: _isPanelExpanded ? 270 : 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black26)],
+                  borderRadius:
+                  BorderRadius.vertical(bottom: Radius.circular(20)),
+                ),
+                child: Column(
+                  children: [
+                    IconButton(
+                      icon: Icon(_isPanelExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down),
+                      onPressed: () => setState(
+                              () => _isPanelExpanded = !_isPanelExpanded),
+                    ),
+                    if (_isPanelExpanded)
+                      Expanded(
+                          child: SingleChildScrollView(
+                              child: _buildDropdowns())),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        Positioned(
-          bottom: 30,
-          right: 20,
-          child: FloatingActionButton(
-            heroTag: 'moveToMyLocation',
-            onPressed: _moveToMyLocation,
-            child: Icon(Icons.my_location),
-            tooltip: '내 위치로 이동',
+          Positioned(
+            bottom: 30,
+            right: 20,
+            child: FloatingActionButton(
+              heroTag: 'moveToMyLocation',
+              onPressed: _moveToMyLocation,
+              child: Icon(Icons.my_location),
+              tooltip: '내 위치로 이동',
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
 }

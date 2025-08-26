@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'mainpage_map_group.dart';
 import 'region_data.dart';
 import 'api_service.dart';
 
 class RegionSelector extends StatefulWidget {
-  const RegionSelector({Key? key}) : super(key: key);
+  final void Function()? onMoveToMap;
+  final void Function(double lat, double lon)? onMapMove;
+
+  const RegionSelector({Key? key, this.onMoveToMap, this.onMapMove}) : super(key: key);
 
   @override
   State<RegionSelector> createState() => _RegionSelectorState();
@@ -13,6 +17,7 @@ class _RegionSelectorState extends State<RegionSelector> {
   String? _selectedCity;      // 시/도
   String? _selectedTown;      // 시/군/구
   String? _selectedDistrict;  // 읍/면/동
+  String? _comment;
 
   List<Map<String, dynamic>> _comments = []; // 검색 결과
 
@@ -56,8 +61,10 @@ class _RegionSelectorState extends State<RegionSelector> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
             onChanged: (text) {
-              // 필요시 처리
               print("코멘트 입력: $text");
+              setState(() {
+                _comment = text; // 코멘트 상태에 저장
+              });
             },
           ),
           const SizedBox(height: 30),
@@ -148,6 +155,7 @@ class _RegionSelectorState extends State<RegionSelector> {
                       final data = await ProblemMarkerService().fetchProblemData(
                         ctprvnNm: _selectedCity ?? '',
                         signguNm: _selectedTown,
+                        comment: _comment,
                       );
                       print('API 응답 데이터: $data');  // 데이터 확인
                       setState(() {
@@ -187,6 +195,8 @@ class _RegionSelectorState extends State<RegionSelector> {
               final comment = _comments[index]['comment'] ?? '코멘트 없음';
               final addr = _comments[index]['addr'] ?? '';
               final cat = _comments[index]['cat'] ?? '';
+              final lat = _comments[index]['latitude'] ?? '';
+              final lon = _comments[index]['longitude'] ?? '';
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 6),
@@ -237,6 +247,21 @@ class _RegionSelectorState extends State<RegionSelector> {
                         ),
                     ],
                   ),
+                  onTap: () {
+                    print('ListTile tapped');
+                    if (widget.onMoveToMap != null) {
+                      print('widget.onMoveToMap is not null, calling');
+                      widget.onMoveToMap!();
+                    }
+                    if (widget.onMapMove != null && lat != null && lon != null) {
+                      print('widget.onMapMove is not null, calling with $lat, $lon');
+                      widget.onMapMove!(
+                          lat is double ? lat : double.parse(lat.toString()),
+                          lon is double ? lon : double.parse(lon.toString())
+                      );
+                    }
+                  },
+
                 ),
               );
             },
