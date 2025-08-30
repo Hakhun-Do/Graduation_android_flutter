@@ -465,8 +465,6 @@ class ProblemMarkerService {
   }
 }
 
-
-
 class BreakdownMarkerService { // 서버 DB에서 이상 마커 요청
 
   Future<List<Map<String, dynamic>>> fetchBreakdownData({
@@ -616,3 +614,58 @@ class TruckAddMarkerService { // 서버 DB에서 소방차전용구역 추가 �
     return allMarkerDb;
   }
 }
+
+
+
+class AllMarkerService {
+  Future<List<Map<String, dynamic>>> fetchAllMarkers({
+    String? ctprvnNm, // 시도명
+    String? signguNm, // 시군구명
+  }) async {
+    final url = 'http://175.106.98.190:1040/pin/all';
+    final uri = Uri.parse(
+      '$url'
+          '${ctprvnNm != null && ctprvnNm.isNotEmpty ? '?ctprvnNm=${Uri.encodeComponent(ctprvnNm)}' : ''}'
+          '${signguNm != null && signguNm.isNotEmpty ? '&signguNm=${Uri.encodeComponent(signguNm)}' : ''}',
+    );
+
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+      });
+
+      if (response.statusCode == 200) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final jsonBody = json.decode(decodedBody);
+
+        if (jsonBody is List) {
+          return jsonBody.map<Map<String, dynamic>>((item) {
+            double? lat;
+            double? lon;
+            if (item['id'] != null) {
+              lat = double.tryParse(item['id']['lat']?.toString() ?? '');
+              lon = double.tryParse(item['id']['lon']?.toString() ?? '');
+            }
+            return {
+              ...item,
+              'latitude': lat,
+              'longitude': lon,
+            };
+          }).toList();
+        } else {
+          print('❌ 예상과 다른 응답 형태: ${jsonBody.runtimeType}');
+          return [];
+        }
+      } else {
+        print('❌ 서버 응답 오류: ${response.statusCode}');
+        print('본문: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ 예외 발생: $e');
+      return [];
+    }
+  }
+}
+

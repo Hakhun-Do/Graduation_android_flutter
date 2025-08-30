@@ -152,20 +152,21 @@ class _RegionSelectorState extends State<RegionSelector> {
                       _selectedDistrict != null)
                       ? () async {
                     try {
-                      final data = await ProblemMarkerService().fetchProblemData(
+                      // 통합 서비스 호출
+                      final data = await AllMarkerService().fetchAllMarkers(
                         ctprvnNm: _selectedCity ?? '',
                         signguNm: _selectedTown,
-                        comment: _comment,
+                        // comment: _comment, // 검색 필터 시에 코멘트 입력 없이 동작 되도록 제거
                       );
-                      print('API 응답 데이터: $data');  // 데이터 확인
+
+                      print('API 응답 총 데이터 수: ${data.length}');
+
                       setState(() {
                         _comments = data;
                       });
-                      print("불러온 코멘트 수: ${data.length}");
                     } catch (e) {
                       print("데이터 불러오기 실패: $e");
                     }
-
                   }
                       : null,
                   style: ElevatedButton.styleFrom(
