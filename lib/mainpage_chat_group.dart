@@ -34,6 +34,36 @@ class _RegionSelectorState extends State<RegionSelector> {
     );
   }
 
+  Future<void> _searchMarkers() async {
+    try {
+      if (_comment != null && _comment!.isNotEmpty) {
+        // 코멘트 검색 API 호출
+        final data = await ApiService().pinSearch(_comment!);
+        print('코멘트 검색 결과 수: ${data.length}');
+        setState(() {
+          _comments = data;
+        });
+      } else if (_selectedCity != null || _selectedTown != null || _selectedDistrict != null) {
+        // 지역 기반 검색 API 호출
+        final data = await AllMarkerService().fetchAllMarkers(
+          ctprvnNm: _selectedCity ?? '',
+          signguNm: _selectedTown,
+        );
+        print('지역 검색 결과 수: ${data.length}');
+        setState(() {
+          _comments = data;
+        });
+      } else {
+        setState(() {
+          _comments.clear();
+        });
+      }
+    } catch (e) {
+      print('검색 중 오류 발생: $e');
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final cityList = regionMap.keys.toList();
@@ -147,26 +177,9 @@ class _RegionSelectorState extends State<RegionSelector> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: (_selectedCity != null ||
-                      _selectedTown != null ||
-                      _selectedDistrict != null)
+                  onPressed: (_selectedCity != null || _selectedTown != null || _selectedDistrict != null || (_comment != null && _comment!.isNotEmpty))
                       ? () async {
-                    try {
-                      // 통합 서비스 호출
-                      final data = await AllMarkerService().fetchAllMarkers(
-                        ctprvnNm: _selectedCity ?? '',
-                        signguNm: _selectedTown,
-                        // comment: _comment, // 검색 필터 시에 코멘트 입력 없이 동작 되도록 제거
-                      );
-
-                      print('API 응답 총 데이터 수: ${data.length}');
-
-                      setState(() {
-                        _comments = data;
-                      });
-                    } catch (e) {
-                      print("데이터 불러오기 실패: $e");
-                    }
+                    await _searchMarkers();
                   }
                       : null,
                   style: ElevatedButton.styleFrom(
