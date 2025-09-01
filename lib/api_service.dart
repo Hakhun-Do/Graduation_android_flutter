@@ -412,6 +412,75 @@ class ApiService {
       return false;
     }
   }
+
+
+
+  // 검색어로 코멘트 검색 기능
+  Future<List<Map<String, dynamic>>> pinSearch(String com) async {
+    String? token = await storage.read(key: "auth_token"); // 저장된 JWT 토큰 가져오기
+    if (token == null) {
+      print("❌ JWT 토큰이 없습니다.");
+      return [];
+    }
+
+    print("🔑 저장된 JWT 토큰: $token");
+
+    final url = Uri.parse("$baseUrl/pin/search"); // 검색 API 엔드포인트
+
+    // ✅ 요청 정보 출력
+    print("🔍 요청 URL: $url");
+    print("🔍 Authorization 헤더: Bearer $token");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Authorization": "Bearer $token", // JWT 토큰 인증
+          "Content-Type": "application/json",
+          "Accept": "*/*",
+          "User-Agent": "PostmanRuntime/7.29.2",
+        },
+        body: jsonEncode({
+          "type": "", // 검색 타입 (현재는 빈 문자열)
+          "com": com, // 검색할 코멘트 or 키워드
+        }),
+      );
+
+      print("🔍 서버 응답 상태 코드: ${response.statusCode}");
+      print("🔍 서버 응답 본문: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final jsonBody = json.decode(decodedBody);
+
+        if (jsonBody is List) {
+          return jsonBody.map<Map<String, dynamic>>((item) {
+            double? lat;
+            double? lon;
+            if (item['id'] != null) {
+              lat = double.tryParse(item['id']['lat']?.toString() ?? '');
+              lon = double.tryParse(item['id']['lon']?.toString() ?? '');
+            }
+            return {
+              ...item,
+              'latitude': lat,
+              'longitude': lon,
+            };
+          }).toList();
+        } else {
+          print('❌ 예상과 다른 응답 형태: ${jsonBody.runtimeType}');
+          return [];
+        }
+      } else {
+        print('❌ 서버 응답 오류: ${response.statusCode}');
+        print('본문: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print("❌ 예외 발생: $e");
+      return [];
+    }
+  }
 }
 
 class ProblemMarkerService {
